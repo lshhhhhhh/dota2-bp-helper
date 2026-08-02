@@ -1,0 +1,431 @@
+{
+  "generated_at_utc": "2026-08-02T03:34:54.641485+00:00",
+  "model_id": "mvp-7.41-all-20260802T032724",
+  "rank_bracket": "全段位",
+  "patch": "7.41",
+  "split": "oldest 80% training, next 10% untouched, newest 10% benchmark",
+  "test_matches": 6652,
+  "test_decisions": 66520,
+  "objective": "maximize predicted win probability for the candidate pick",
+  "outcome_prediction_metrics": {
+    "overall": {
+      "auc": 0.5438305232124022,
+      "log_loss": 0.6899318051236023,
+      "brier": 0.24839945562676513,
+      "accuracy": 0.5288484666265785,
+      "ece_10": 0.004317079516272196
+    },
+    "phase_1": {
+      "auc": 0.5221001113378476,
+      "log_loss": 0.692376111106324,
+      "brier": 0.24961491655064225,
+      "accuracy": 0.5140935057125676,
+      "ece_10": 0.0018279655470825398
+    },
+    "phase_2": {
+      "auc": 0.547823332761721,
+      "log_loss": 0.6894432521240043,
+      "brier": 0.2481573603933869,
+      "accuracy": 0.5328096812988575,
+      "ece_10": 0.0068369680131890286
+    },
+    "phase_3": {
+      "auc": 0.5694435756258477,
+      "log_loss": 0.6860202991573547,
+      "brier": 0.24645272424576747,
+      "accuracy": 0.5504359591100421,
+      "ece_10": 0.007082754874885369
+    }
+  },
+  "global_hero_winrate_prediction_baseline": {
+    "overall": {
+      "auc": 0.5232086900561873,
+      "log_loss": 0.6936910917074898,
+      "brier": 0.2502711917682671,
+      "accuracy": 0.5055472038484666,
+      "ece_10": 0.026549666048392512
+    },
+    "phase_1": {
+      "auc": 0.5210042699395676,
+      "log_loss": 0.6940186173101748,
+      "brier": 0.2504345497704186,
+      "accuracy": 0.5033824413710163,
+      "ece_10": 0.02755828198755121
+    },
+    "phase_2": {
+      "auc": 0.5204426116741256,
+      "log_loss": 0.6938277593340769,
+      "brier": 0.25033927545420803,
+      "accuracy": 0.5055622369212267,
+      "ece_10": 0.026362201766941085
+    },
+    "phase_3": {
+      "auc": 0.5340867806046423,
+      "log_loss": 0.6927627052489451,
+      "brier": 0.24980830839208215,
+      "accuracy": 0.5098466626578473,
+      "ece_10": 0.024907362732977736
+    }
+  },
+  "lineup_information_auc_gain": {
+    "phase_1": 0.0010958413982800064,
+    "phase_2": 0.027380721087595372,
+    "phase_3": 0.03535679502120537
+  },
+  "historical_winrate_association": {
+    "phase_1": {
+      "outcome_recommender": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 145,
+          "followed_win_rate": 0.565517246723175,
+          "other_decisions": 26463,
+          "other_win_rate": 0.4996410012245178,
+          "observed_difference_points": 6.587624549865723,
+          "approximate_95_ci_points": [
+            -1.503120519020347,
+            14.678369618751791
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 1306,
+          "followed_win_rate": 0.5459418296813965,
+          "other_decisions": 25302,
+          "other_win_rate": 0.49762865900993347,
+          "observed_difference_points": 4.831317067146301,
+          "approximate_95_ci_points": [
+            2.0616179359611864,
+            7.601016198331416
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 3304,
+          "followed_win_rate": 0.5305690169334412,
+          "other_decisions": 23304,
+          "other_win_rate": 0.495665967464447,
+          "observed_difference_points": 3.490304946899414,
+          "approximate_95_ci_points": [
+            1.671513684923802,
+            5.309096208875026
+          ]
+        }
+      },
+      "pick_prediction_baseline": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 1618,
+          "followed_win_rate": 0.5259580016136169,
+          "other_decisions": 24990,
+          "other_win_rate": 0.4983193278312683,
+          "observed_difference_points": 2.7638673782348633,
+          "approximate_95_ci_points": [
+            0.2530838125866897,
+            5.274650943883037
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 5674,
+          "followed_win_rate": 0.5059922337532043,
+          "other_decisions": 20934,
+          "other_win_rate": 0.4983758330345154,
+          "observed_difference_points": 0.7616400718688965,
+          "approximate_95_ci_points": [
+            -0.705043367698393,
+            2.228323511436186
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 9160,
+          "followed_win_rate": 0.4995633065700531,
+          "other_decisions": 17448,
+          "other_win_rate": 0.5002292394638062,
+          "observed_difference_points": -0.06659328937530518,
+          "approximate_95_ci_points": [
+            -1.3310719488423381,
+            1.1978853700917278
+          ]
+        }
+      },
+      "global_hero_winrate_baseline": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 145,
+          "followed_win_rate": 0.565517246723175,
+          "other_decisions": 26463,
+          "other_win_rate": 0.4996410012245178,
+          "observed_difference_points": 6.587624549865723,
+          "approximate_95_ci_points": [
+            -1.503120519020347,
+            14.678369618751791
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 797,
+          "followed_win_rate": 0.539523184299469,
+          "other_decisions": 25811,
+          "other_win_rate": 0.4987795948982239,
+          "observed_difference_points": 4.074358940124512,
+          "approximate_95_ci_points": [
+            0.5605316997477918,
+            7.588186180501231
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 1406,
+          "followed_win_rate": 0.5405405163764954,
+          "other_decisions": 25202,
+          "other_win_rate": 0.4977382719516754,
+          "observed_difference_points": 4.280224442481995,
+          "approximate_95_ci_points": [
+            1.6031192096375708,
+            6.957329675326418
+          ]
+        }
+      }
+    },
+    "phase_2": {
+      "outcome_recommender": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 501,
+          "followed_win_rate": 0.5648702383041382,
+          "other_decisions": 26107,
+          "other_win_rate": 0.4987551271915436,
+          "observed_difference_points": 6.6115111112594604,
+          "approximate_95_ci_points": [
+            2.2280360033915034,
+            10.994986219127417
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 1866,
+          "followed_win_rate": 0.549839198589325,
+          "other_decisions": 24742,
+          "other_win_rate": 0.4962412118911743,
+          "observed_difference_points": 5.3597986698150635,
+          "approximate_95_ci_points": [
+            3.018037745823384,
+            7.701559593806742
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 3150,
+          "followed_win_rate": 0.5400000214576721,
+          "other_decisions": 23458,
+          "other_win_rate": 0.4946286976337433,
+          "observed_difference_points": 4.537132382392883,
+          "approximate_95_ci_points": [
+            2.682748037511836,
+            6.39151672727393
+          ]
+        }
+      },
+      "pick_prediction_baseline": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 905,
+          "followed_win_rate": 0.5392265319824219,
+          "other_decisions": 25703,
+          "other_win_rate": 0.49861884117126465,
+          "observed_difference_points": 4.060769081115723,
+          "approximate_95_ci_points": [
+            0.7561528926815559,
+            7.36538526954989
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 3817,
+          "followed_win_rate": 0.516636073589325,
+          "other_decisions": 22791,
+          "other_win_rate": 0.49721381068229675,
+          "observed_difference_points": 1.9422262907028198,
+          "approximate_95_ci_points": [
+            0.22912733588958192,
+            3.6553252455160576
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 6564,
+          "followed_win_rate": 0.5082266926765442,
+          "other_decisions": 20044,
+          "other_win_rate": 0.4973059296607971,
+          "observed_difference_points": 1.092076301574707,
+          "approximate_95_ci_points": [
+            -0.3014329788739955,
+            2.4855855820234094
+          ]
+        }
+      },
+      "global_hero_winrate_baseline": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 500,
+          "followed_win_rate": 0.5659999847412109,
+          "other_decisions": 26108,
+          "other_win_rate": 0.49873602390289307,
+          "observed_difference_points": 6.726396083831787,
+          "approximate_95_ci_points": [
+            2.3399197978331627,
+            11.112872369830413
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 1589,
+          "followed_win_rate": 0.5544367432594299,
+          "other_decisions": 25019,
+          "other_win_rate": 0.49654263257980347,
+          "observed_difference_points": 5.7894110679626465,
+          "approximate_95_ci_points": [
+            3.2682486425623685,
+            8.310573493362924
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 3083,
+          "followed_win_rate": 0.5445994138717651,
+          "other_decisions": 23525,
+          "other_win_rate": 0.4941551685333252,
+          "observed_difference_points": 5.044424533843994,
+          "approximate_95_ci_points": [
+            3.1739826376104854,
+            6.9148664300775025
+          ]
+        }
+      }
+    },
+    "phase_3": {
+      "outcome_recommender": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 215,
+          "followed_win_rate": 0.5860465168952942,
+          "other_decisions": 13089,
+          "other_win_rate": 0.49858659505844116,
+          "observed_difference_points": 8.745992183685303,
+          "approximate_95_ci_points": [
+            2.1066724074557284,
+            15.385311959914876
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 1280,
+          "followed_win_rate": 0.571093738079071,
+          "other_decisions": 12024,
+          "other_win_rate": 0.49243178963661194,
+          "observed_difference_points": 7.866194844245911,
+          "approximate_95_ci_points": [
+            5.011376969943612,
+            10.72101271854821
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 1773,
+          "followed_win_rate": 0.5589396357536316,
+          "other_decisions": 11531,
+          "other_win_rate": 0.4909374713897705,
+          "observed_difference_points": 6.800216436386108,
+          "approximate_95_ci_points": [
+            4.31543275461718,
+            9.285000118155038
+          ]
+        }
+      },
+      "pick_prediction_baseline": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 866,
+          "followed_win_rate": 0.5300230979919434,
+          "other_decisions": 12438,
+          "other_win_rate": 0.49790963530540466,
+          "observed_difference_points": 3.2113462686538696,
+          "approximate_95_ci_points": [
+            -0.22699924921917927,
+            6.649691786526918
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 3318,
+          "followed_win_rate": 0.5138638019561768,
+          "other_decisions": 9986,
+          "other_win_rate": 0.4953935444355011,
+          "observed_difference_points": 1.847025752067566,
+          "approximate_95_ci_points": [
+            -0.1161233052383099,
+            3.8101748093734416
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 5547,
+          "followed_win_rate": 0.5114476084709167,
+          "other_decisions": 7757,
+          "other_win_rate": 0.4918138384819031,
+          "observed_difference_points": 1.9633769989013672,
+          "approximate_95_ci_points": [
+            0.2405147306690416,
+            3.6862392671336925
+          ]
+        }
+      },
+      "global_hero_winrate_baseline": {
+        "top_1": {
+          "top_k": 1,
+          "followed_decisions": 231,
+          "followed_win_rate": 0.6017315983772278,
+          "other_decisions": 13073,
+          "other_win_rate": 0.4982024133205414,
+          "observed_difference_points": 10.35291850566864,
+          "approximate_95_ci_points": [
+            3.981947697394643,
+            16.723889313942635
+          ]
+        },
+        "top_5": {
+          "top_k": 5,
+          "followed_decisions": 1139,
+          "followed_win_rate": 0.5812115669250488,
+          "other_decisions": 12165,
+          "other_win_rate": 0.49239620566368103,
+          "observed_difference_points": 8.88153612613678,
+          "approximate_95_ci_points": [
+            5.881734884183334,
+            11.881337368090225
+          ]
+        },
+        "top_10": {
+          "top_k": 10,
+          "followed_decisions": 1876,
+          "followed_win_rate": 0.5522388219833374,
+          "other_decisions": 11428,
+          "other_win_rate": 0.491424560546875,
+          "observed_difference_points": 6.08142614364624,
+          "approximate_95_ci_points": [
+            3.651679951533461,
+            8.511172335759019
+          ]
+        }
+      }
+    }
+  },
+  "model_estimated_advantage_points": {
+    "phase_1": 4.17057466506958,
+    "phase_2": 4.479104518890381,
+    "phase_3": 4.688584327697754
+  },
+  "interpretation": "Outcome AUC/log loss/calibration are genuine held-out predictive metrics. Top-K win-rate differences are observational associations, not causal effects. Model-estimated advantage is a counterfactual projection from the same Q model and must not be presented as measured win-rate lift."
+}

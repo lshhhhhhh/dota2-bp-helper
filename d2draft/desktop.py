@@ -356,6 +356,14 @@ class DraftDesktopApp:
         policy = report.get("policy", {})
         matches = int(policy.get("train_matches", 0)) + int(policy.get("test_matches", 0))
         examples = int(policy.get("train_examples", 0)) + int(policy.get("test_examples", 0))
+        outcome = report.get("outcome", {})
+        if outcome:
+            matches = int(outcome.get("train_matches", 0)) + int(
+                outcome.get("test_matches", 0)
+            )
+            examples = int(outcome.get("train_examples", 0)) + int(
+                outcome.get("test_examples", 0)
+            )
         created = str(manifest.get("created_at_utc", self._t("unknown")))
         return self._t(
             "model_overview",
@@ -383,6 +391,32 @@ class DraftDesktopApp:
         )
 
     def _model_metrics_text(self) -> str:
+        outcome = self.model_bundle.report.get("outcome", {})
+        if outcome:
+            metrics = outcome.get("metrics", {})
+            examples = int(outcome.get("train_examples", 0)) + int(
+                outcome.get("test_examples", 0)
+            )
+            lines = [
+                self._t("outcome_metrics_intro", examples=f"{examples:,}"),
+                "",
+                self._t("outcome_metrics_header"),
+            ]
+            for phase in (1, 2, 3):
+                values = metrics.get(f"phase_{phase}", {})
+                lines.append(
+                    self._t(
+                        "outcome_metrics_row",
+                        phase=phase,
+                        auc=self._metric(values.get("auc")),
+                        logloss=self._metric(values.get("log_loss")),
+                        brier=self._metric(values.get("brier")),
+                        ece=self._metric(values.get("ece_10")),
+                    )
+                )
+            lines.extend(["", self._t("outcome_metrics_explanation")])
+            return "\n".join(lines)
+
         backtest = self.model_bundle.backtest
         selected = backtest.get("final_test_selected", {})
         baseline = backtest.get("final_test_policy_baseline", {})
@@ -421,6 +455,38 @@ class DraftDesktopApp:
         return "\n".join(lines)
 
     def _model_benchmark_text(self) -> str:
+        outcome_report = self.model_bundle.outcome_benchmark
+        if outcome_report:
+            metrics = outcome_report["outcome_prediction_metrics"]["phase_3"]
+            baseline = outcome_report["global_hero_winrate_prediction_baseline"][
+                "phase_3"
+            ]
+            methods = outcome_report["historical_winrate_association"]["phase_3"]
+            top_five = methods["outcome_recommender"]["top_5"]
+            policy = methods["pick_prediction_baseline"]["top_5"]
+            low, high = top_five["approximate_95_ci_points"]
+            return "\n\n".join(
+                [
+                    self._t(
+                        "benchmark_title", rank=self._rank_label(self.model_bundle)
+                    ),
+                    self._t(
+                        "outcome_benchmark_body",
+                        auc=float(metrics["auc"]),
+                        baseline_auc=float(baseline["auc"]),
+                        auc_gain=float(metrics["auc"] - baseline["auc"]),
+                        top5_followed=float(top_five["followed_win_rate"]),
+                        top5_followed_n=int(top_five["followed_decisions"]),
+                        top5_other=float(top_five["other_win_rate"]),
+                        top5_other_n=int(top_five["other_decisions"]),
+                        top5_diff=float(top_five["observed_difference_points"]),
+                        low=float(low),
+                        high=float(high),
+                        policy_diff=float(policy["observed_difference_points"]),
+                    ),
+                ]
+            )
+
         report = self.model_bundle.advantage_benchmark
         if not report:
             return self._t("benchmark_missing")
@@ -1074,7 +1140,11 @@ class DraftDesktopApp:
                     recommendation.rank,
                     self._hero_name(info),
                     f"{recommendation.policy_probability:.1%}",
-                    f"{recommendation.value_log_odds_delta:+.3f}",
+                    (
+                        f"{recommendation.predicted_win_probability:.1%}"
+                        if recommendation.predicted_win_probability is not None
+                        else f"{recommendation.value_log_odds_delta:+.3f}"
+                    ),
                 ),
             )
 
@@ -1106,17 +1176,27 @@ class DraftDesktopApp:
             self.result_titles["dire"].set(self._t("dire_recommendation"))
             radiant_kind = self._t(f"kind_{radiant_kind}")
             dire_kind = self._t(f"kind_{dire_kind}")
-            self.status_var.set(
-                self._t(
-                    "recommendation_done",
-                    phase=phase,
-                    radiant_kind=radiant_kind,
-                    dire_kind=dire_kind,
-                    blend=blend,
-                    rank=self._rank_label(self.model_bundle),
-                    patch=self.model_patch,
+            if self.recommender.objective == "outcome":
+                self.status_var.set(
+                    self._t(
+                        "outcome_recommendation_done",
+                        phase=phase,
+                        rank=self._rank_label(self.model_bundle),
+                        patch=self.model_patch,
+                    )
                 )
-            )
+            else:
+                self.status_var.set(
+                    self._t(
+                        "recommendation_done",
+                        phase=phase,
+                        radiant_kind=radiant_kind,
+                        dire_kind=dire_kind,
+                        blend=blend,
+                        rank=self._rank_label(self.model_bundle),
+                        patch=self.model_patch,
+                    )
+                )
         except Exception as exc:
             self.status_var.set(self._t("cannot_recommend", error=exc))
             if not silent:

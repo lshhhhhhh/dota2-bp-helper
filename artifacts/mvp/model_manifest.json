@@ -1,10 +1,10 @@
 {
   "format_version": 1,
-  "model_id": "mvp-7.41-all-20260802T014224",
-  "display_name": "Dota 2 BP Hybrid · 全段位",
+  "model_id": "mvp-7.41-all-20260802T032724",
+  "display_name": "Dota 2 BP Outcome · 全段位",
   "artifact": "hybrid_model.npz",
-  "artifact_sha256": "d5c9ecd7d7ca3fb6036f714b21903b20e391b9ed22a34b3fa79b6ce9cb62dd9f",
-  "created_at_utc": "2026-08-02T01:42:24.922737+00:00",
+  "artifact_sha256": "02308cca3b81cac52bc29685f343b635ccab459704614384d5ec41fbde9d2e7a",
+  "created_at_utc": "2026-08-02T03:27:24.319390+00:00",
   "game_patches": [
     "7.41"
   ],
@@ -15,7 +15,8 @@
     "minimum_avg_rank_tier": null,
     "maximum_avg_rank_tier_exclusive": null
   },
-  "model_family": "phase-aware hybrid recommender",
+  "model_family": "candidate-conditioned outcome recommender",
   "input_contract": "BP phase + allied hero IDs + enemy hero IDs",
-  "output_contract": "ranked legal hero IDs with policy and value scores"
+  "output_contract": "legal hero IDs ranked by predicted win probability",
+  "recommendation_objective": "maximize predicted match win probability"
 }

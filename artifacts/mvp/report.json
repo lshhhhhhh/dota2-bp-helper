@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-02T01:42:24.922737+00:00",
+  "generated_at_utc": "2026-08-02T03:27:24.319390+00:00",
   "seed": 20260801,
   "split": "oldest 80% train, newest 20% test",
   "heroes": 127,
@@ -84,6 +84,49 @@
     "The policy sample is intentionally small and is only a signal check.",
     "Observed player picks are not a unique ground-truth optimal recommendation.",
     "The public match sample is visibility-biased.",
-    "No role, lane, player proficiency, or expert tags are used."
-  ]
+    "No role, lane, player proficiency, or expert tags are used.",
+    "Outcomes for unchosen candidates are counterfactual estimates, not observed labels."
+  ],
+  "outcome": {
+    "objective": "predict candidate win probability from the public draft state",
+    "architecture": "candidate-conditioned embedding interaction network",
+    "split": "oldest 80% train, newest 20% test",
+    "train_matches": 53212,
+    "test_matches": 13303,
+    "train_examples": 532120,
+    "test_examples": 133030,
+    "embedding_dimensions": 16,
+    "epochs": 16,
+    "metrics": {
+      "overall": {
+        "auc": 0.5393157427208389,
+        "log_loss": 0.6907208148736261,
+        "brier": 0.24878813330980687,
+        "accuracy": 0.5266255731789822,
+        "ece_10": 0.0063819645198809625
+      },
+      "phase_1": {
+        "auc": 0.5180698003974226,
+        "log_loss": 0.6925981479851672,
+        "brier": 0.24972570161545535,
+        "accuracy": 0.5130985491994287,
+        "ece_10": 0.002737312285239508
+      },
+      "phase_2": {
+        "auc": 0.5426031022896114,
+        "log_loss": 0.6904442489003042,
+        "brier": 0.24865228120292956,
+        "accuracy": 0.5306321882282192,
+        "ece_10": 0.008301810665631673
+      },
+      "phase_3": {
+        "auc": 0.5636080332775858,
+        "log_loss": 0.6875192805971879,
+        "brier": 0.24718470091226433,
+        "accuracy": 0.5456663910396151,
+        "ece_10": 0.009863695452211165
+      }
+    },
+    "losing_pick_feedback": "Every chosen hero on the losing side is labeled 0; every chosen hero on the winning side is labeled 1."
+  }
 }

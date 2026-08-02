@@ -60,6 +60,17 @@ class RecommenderIntegrationTest(unittest.TestCase):
         self.assertEqual(kind, "neural")
         self.assertEqual(len(recommendations), 5)
 
+    def test_production_recommender_optimizes_outcome(self) -> None:
+        self.assertEqual(self.model.objective, "outcome")
+        recommendations, _ = self.model.recommend(
+            DraftState(phase=1, allies=(), enemies=()), top_k=5
+        )
+        probabilities = [
+            item.predicted_win_probability for item in recommendations
+        ]
+        self.assertTrue(all(value is not None for value in probabilities))
+        self.assertEqual(probabilities, sorted(probabilities, reverse=True))
+
 
 if __name__ == "__main__":
     unittest.main()

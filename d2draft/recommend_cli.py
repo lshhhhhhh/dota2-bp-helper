@@ -60,6 +60,7 @@ def main() -> None:
                     "allies": state.allies,
                     "enemies": state.enemies,
                     "policy_model": policy_kind,
+                    "recommendation_objective": recommender.objective,
                     "value_blend": value_blend,
                     "recommendations": [recommendation.__dict__ for recommendation in recommendations],
                 },
@@ -69,15 +70,17 @@ def main() -> None:
         )
         return
 
-    print(
-        f"Phase {state.phase} | Policy={policy_kind} | Value blend={value_blend:g}"
-    )
-    print("rank  hero                         policy    value_d   roles")
+    print(f"Phase {state.phase} | Objective={recommender.objective}")
+    print("rank  hero                         pick_p     win_p     roles")
     for item in recommendations:
         roles = ", ".join(item.roles[:3])
+        if item.predicted_win_probability is not None:
+            score_text = f"{item.predicted_win_probability:>7.2%}"
+        else:
+            score_text = f"{item.value_log_odds_delta:>+7.3f}"
         print(
             f"{item.rank:>4}  {item.name:<27} "
-            f"{item.policy_probability:>7.2%}  {item.value_log_odds_delta:>+7.3f}  {roles}"
+            f"{item.policy_probability:>7.2%}  {score_text}  {roles}"
         )
 
 

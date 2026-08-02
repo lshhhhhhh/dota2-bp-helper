@@ -8,7 +8,7 @@
 
 ### 下载与运行
 
-普通用户请从 [GitHub Releases](https://github.com/lshhhhhhh/dota2-bp-helper/releases/latest) 下载 `Dota2BPHelper-0.2.0-win64.zip`：
+普通用户请从 [GitHub Releases](https://github.com/lshhhhhhh/dota2-bp-helper/releases/latest) 下载 `Dota2BPHelper-0.3.0-win64.zip`：
 
 1. 将压缩包完整解压到任意目录；不要直接在压缩包内运行。
 2. 双击 `Dota2BPHelper.exe`。
@@ -28,7 +28,7 @@
 - 点击头像移除，或手动向任一方添加英雄；
 - 输入提示支持官方中英文名、拼音、内部名、常用缩写与国服绰号，例如 `主宰`、`剑圣`、`jugg`；
 - 同时给两边推荐下一手；对方推荐也代表己方需要防范的候选；
-- 推荐列表显示英雄头像、选择概率和胜率倾向；
+- 推荐列表显示英雄头像、预测选择率和候选预测胜率；
 - 内置传奇及以上、统帅及以下、全段位三套模型。
 
 独占全屏模式有时会让系统截图返回黑屏，建议使用无边框窗口模式。直播窗口可以不最大化，但画面过小、被遮挡或使用非 16:9 比例时可能降低识别率。
@@ -38,27 +38,27 @@
 系统分成四层：
 
 1. `DraftState`：只描述公开阵容和轮次；
-2. `PolicyModel`：根据当前状态估计下一手的选择分布；
-3. `ValueModel`：估计完整阵容的胜率倾向；
+2. `OutcomeModel`：估计当前状态下选择每个候选后的获胜概率；
+3. `PolicyModel`：只作为玩家行为预测和未来 rollout 的辅助模块；
 4. 桌面端：负责截图识别、状态管理和界面展示。
 
 桌面端通过每个模型目录内的 `model_manifest.json` 发现并加载模型。Manifest 声明模型 ID、Dota 版本、适用分段、英雄表、输入输出契约和文件 SHA-256。应用只允许切换随项目发布且通过兼容性校验的模型包，不直接载入任意 `.npz` 文件。
 
-第一轮双方没有公开阵容信息，模型按当前版本的选择频率排序。第二、三轮把双方已选英雄和轮次输入一个小型单隐藏层神经网络；Value 模块按独立回测选出的权重加入胜率倾向。当前模型没有使用位置、分路、玩家熟练度，或“先手”“幻象处理”等专家标签。
+Outcome 模型直接学习 `P(获胜 | 当前公开阵容, 候选英雄, BP轮次)`。胜方五个选择的标签为 1，败方五个选择的标签为 0，因此“选了但输了”会直接反馈到模型中。候选、公开队友和公开敌人的嵌入用于学习英雄强度、配合和克制；最终排序只看预测胜率，不再优化“像不像玩家常见选择”。当前模型没有使用位置、分路、玩家熟练度，或“先手”“幻象处理”等专家标签。
 
 ### Benchmark 应该怎样理解
 
-当前发布模型在按时间留出的测试集上，第三轮的前 10 覆盖率如下：
+新的主 Benchmark 使用完全按时间留出的比赛，首先衡量模型能否预测实际胜负：
 
-| 适用人群 | 阵容模型前 10 | 完全不看阵容的常见选择榜 | 每 100 次多覆盖 |
-| --- | ---: | ---: | ---: |
-| 传奇及以上 | 40.57% | 29.09% | +11.48 |
-| 统帅及以下 | 40.83% | 33.76% | +7.07 |
-| 全段位 | 41.65% | 31.59% | +10.06 |
+| 适用人群 | 第三轮 AUC | 只看英雄总体胜率 | 阵容信息增量 | 前五内胜率 | 前五外胜率 | 观察差值 | 粗略 95% 区间 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 传奇及以上 | 0.561 | 0.522 | +0.039 | 56.7% | 49.4% | +7.3 点 | +2.6～+12.0 |
+| 统帅及以下 | 0.574 | 0.552 | +0.021 | 60.0% | 48.9% | +11.1 点 | +7.2～+14.9 |
+| 全段位 | 0.569 | 0.534 | +0.035 | 57.1% | 49.2% | +7.9 点 | +5.0～+10.7 |
 
-“前 10 覆盖率”表示真实玩家下一手出现在推荐前十中的比例。第一轮没有公开阵容信息，所以阵容模型不应比常见选择榜更强；第三轮已有公开 4v4 阵容，模型优势最明显。
+AUC 为 0.5 等于随机；这里的增量说明公开 4v4 阵容确实提供了英雄总体胜率之外的胜负信息。旧的 Hit@5、Hit@10 和 MRR 仍保留，用来检查 Policy 是否能模拟玩家行为，但不再作为推荐模型的主要成功标准。
 
-历史对局中，选择模型前五推荐的组别有约 `+0.8` 至 `+1.5` 个百分点的观察胜率差，前十为约 `+0.9` 至 `+2.2` 个百分点，但粗略 95% 区间仍跨过零。玩家并非随机分配到英雄，因此这只是历史关联，不能宣传成模型已被证明可以因果性提高相同数值的胜率。完整数字见 [`artifacts/models/BENCHMARK.md`](artifacts/models/BENCHMARK.md)。
+表中的 AUC、LogLoss、Brier 和校准误差是未参与训练比赛上的真实预测指标；“前五内外胜率差”仍是观察关联。玩家并非随机分配到英雄，未选择英雄也没有真实反事实结果，因此不能把 `+7.3` 或 `+11.1` 点宣传成 App 已经因果性提高了相同数值的胜率。完整数字见各模型的 `outcome_benchmark.json`。
 
 ### 从源码运行
 
@@ -79,21 +79,22 @@ python -m unittest discover -s tests -v
 
 ```powershell
 python -m pip install -e ".[build]"
-powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.2.0
+powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.3.0
 ```
 
-构建结果位于 `dist/Dota2BPHelper-0.2.0-win64.zip`。项目没有自动 GitHub Actions 工作流；测试和发布由维护者手动执行。
+构建结果位于 `dist/Dota2BPHelper-0.3.0-win64.zip`。项目没有自动 GitHub Actions 工作流；测试和发布由维护者手动执行。
 
 ### 数据与训练
 
 训练数据来自 OpenDota 的公开逐场比赛数据。采集器保存规范化 SQLite 数据并支持按 Dota 版本隔离、限速、断点续传、去重和硬请求上限。公开仓库及便携版不包含原始 API 响应、训练数据库、玩家资料或 API Key。
 
-仓库内的三个现役 7.41 模型使用 56,625 场可重建 BP 的对局训练。研究命令和数据结构保留在 `d2draft/`；若需要重新采集，应自行在 `.env` 设置 `OPENDOTA_API_KEY`，并显式指定请求预算。不要提交 `.env`。
+全段位 Outcome 模型使用 66,515 场可重建的 7.41 BP；传奇及以上和统帅及以下分别使用 28,665 和 35,522 场。分段模型从全段位模型预训练后再微调。研究命令和数据结构保留在 `d2draft/`；若需要重新采集，应自行在 `.env` 设置 `OPENDOTA_API_KEY`，并显式指定请求预算。不要提交 `.env`。
 
 主要离线指标：
 
-- Policy：Hit@5、Hit@10、MRR 和中位排名；
-- Value：AUC、Log Loss、Brier Score、Accuracy 和 ECE；
+- Outcome：按轮次报告 AUC、Log Loss、Brier Score、Accuracy 和 ECE；
+- Recommendation：前 1/5/10 历史胜率关联、样本量和置信区间；
+- Policy：Hit@5、Hit@10、MRR 和中位排名，仅作为行为模拟诊断；
 - 数据按时间切分，较新的比赛只用于最终测试；
 - 报告同时给出不看阵容的常见选择榜，避免只看神经网络的绝对数字。
 
@@ -103,7 +104,7 @@ powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.2.0
 - 极少数比赛的 `picks_bans` 不完整，采集器会将其标记为无效；
 - MVP 将同一英雄视为全局不可重复，没有完整模拟双方同轮撞英雄后的重选过程；
 - 视觉模块可能需要针对新的 Dota UI、缩放方式或宽高比重新标定；
-- 胜率倾向主要用于候选排序，不应当作精确的个人胜率预测。
+- 候选预测胜率用于相对排序，不应当作精确的个人胜率预测。
 
 ### 许可证与声明
 
@@ -119,7 +120,7 @@ An offline draft assistant for Dota 2 ranked All Pick's three simultaneous blind
 
 ### Download and run
 
-Download `Dota2BPHelper-0.2.0-win64.zip` from [GitHub Releases](https://github.com/lshhhhhhh/dota2-bp-helper/releases/latest):
+Download `Dota2BPHelper-0.3.0-win64.zip` from [GitHub Releases](https://github.com/lshhhhhhh/dota2-bp-helper/releases/latest):
 
 1. Extract the whole archive to any folder; do not run it from inside the ZIP.
 2. Double-click `Dota2BPHelper.exe`.
@@ -139,7 +140,7 @@ The portable build does not require Python. The app does not read Dota 2 process
 - Click a portrait to remove it, or add a hero manually to either side;
 - Type-ahead search across official Chinese/English names, pinyin, internal names, abbreviations, and common Chinese nicknames—for example `主宰`, `剑圣`, or `jugg`;
 - Recommend for both sides at once; the opposing recommendation is also a hero your side should be ready for;
-- Show hero portraits, pick probabilities, and win-rate tendency in the recommendation list;
+- Show hero portraits, predicted pick probability, and candidate win probability;
 - Three built-in models: Legend and above, Archon and below, and all ranks.
 
 Exclusive fullscreen can cause Windows screen capture to return a black frame, so borderless windowed mode is recommended. A stream window does not need to be maximized, but a very small, occluded, or non-16:9 viewport may reduce recognition quality.
@@ -149,27 +150,27 @@ Exclusive fullscreen can cause Windows screen capture to return a black frame, s
 The system has four layers:
 
 1. `DraftState` describes only the public lineup and round;
-2. `PolicyModel` estimates the next-pick distribution for the current state;
-3. `ValueModel` estimates the win-rate tendency of a completed lineup;
+2. `OutcomeModel` estimates the probability of winning after selecting each candidate;
+3. `PolicyModel` is retained only as an auxiliary behavior model for future rollouts;
 4. The desktop app handles screen recognition, state management, and presentation.
 
 The app discovers each model through its `model_manifest.json`. The manifest declares the model ID, Dota patch, skill bracket, hero catalog, input/output contract, and SHA-256 file hash. Only bundled models that pass compatibility checks can be selected; arbitrary `.npz` files cannot be loaded directly.
 
-In round 1, neither side has public lineup information, so heroes are ranked by pick frequency for the patch. In rounds 2 and 3, both revealed lineups and the round are fed into a small one-hidden-layer neural network. A Value module blends in win-rate tendency using a weight selected by a held-out backtest. The current model does not use roles, lanes, player proficiency, or expert tags such as initiative and illusion clear.
+The Outcome model directly learns `P(win | public lineup, candidate hero, draft round)`. All five picks on the winning side receive label 1, while all five picks on the losing side receive label 0, so a pick that loses feeds back directly into training. Embeddings for the candidate, revealed allies, and revealed enemies learn hero strength, synergy, and counter relationships. Final ranking uses predicted win probability only; it no longer optimizes similarity to common player choices. Roles, lanes, player proficiency, and expert tags are still not included.
 
 ### How to read the benchmark
 
-On the chronologically held-out test set, round-3 Hit@10 is:
+The new primary benchmark uses strictly chronological holdout matches and first measures whether the model predicts actual outcomes:
 
-| Population | Lineup-aware model | Pick-frequency list with no lineup | Extra hits per 100 decisions |
-| --- | ---: | ---: | ---: |
-| Legend and above | 40.57% | 29.09% | +11.48 |
-| Archon and below | 40.83% | 33.76% | +7.07 |
-| All ranks | 41.65% | 31.59% | +10.06 |
+| Population | Round-3 AUC | Hero win rate only | Lineup AUC gain | Win rate inside top 5 | Outside top 5 | Observed difference | Approx. 95% interval |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Legend and above | 0.561 | 0.522 | +0.039 | 56.7% | 49.4% | +7.3 pts | +2.6 to +12.0 |
+| Archon and below | 0.574 | 0.552 | +0.021 | 60.0% | 48.9% | +11.1 pts | +7.2 to +14.9 |
+| All ranks | 0.569 | 0.534 | +0.035 | 57.1% | 49.2% | +7.9 pts | +5.0 to +10.7 |
 
-Hit@10 is the share of actual next picks found in the top ten recommendations. With no public lineup in round 1, a lineup-aware model should not beat the pick-frequency list. Its largest advantage appears in round 3, where a public 4v4 lineup is available.
+An AUC of 0.5 is random. The gain over hero win rate alone shows that the public 4v4 lineup contains outcome information beyond global hero strength. Hit@5, Hit@10, and MRR remain as Policy diagnostics, but they are no longer the primary success criteria for recommendations.
 
-Historically, groups whose actual pick fell inside the model's top five had an observed win-rate difference of roughly `+0.8` to `+1.5` percentage points; top-ten differences were about `+0.9` to `+2.2` points. However, the approximate 95% intervals still cross zero, and players were not randomly assigned to picks. These are associations, not proof that the model causally increases win rate by the same amount. See [`artifacts/models/BENCHMARK.md`](artifacts/models/BENCHMARK.md) for the full results.
+AUC, LogLoss, Brier, and calibration are genuine predictive metrics on unseen matches. The top-five win-rate differences remain observational associations. Players were not randomly assigned to heroes, and unchosen candidates have no observed counterfactual outcome, so `+7.3` or `+11.1` points must not be advertised as proven causal lift. Full machine-readable results are in each model's `outcome_benchmark.json`.
 
 ### Run from source
 
@@ -190,21 +191,22 @@ Build the Windows portable archive:
 
 ```powershell
 python -m pip install -e ".[build]"
-powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.2.0
+powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.3.0
 ```
 
-The output is `dist/Dota2BPHelper-0.2.0-win64.zip`. This repository has no automatic GitHub Actions workflow; maintainers run tests and releases manually.
+The output is `dist/Dota2BPHelper-0.3.0-win64.zip`. This repository has no automatic GitHub Actions workflow; maintainers run tests and releases manually.
 
 ### Data and training
 
 Training data comes from OpenDota's public per-match data. The collector stores normalized SQLite records and supports patch isolation, rate limiting, resume, deduplication, and a hard request cap. Neither the public repository nor the portable build includes raw API responses, the training database, player profiles, or API keys.
 
-The three bundled 7.41 models were trained on 56,625 reconstructable drafts. Research commands and data structures remain under `d2draft/`. To collect new data, set `OPENDOTA_API_KEY` in your own `.env` and specify an explicit request budget. Never commit `.env`.
+The all-rank Outcome model uses 66,515 reconstructable 7.41 drafts; the Legend-and-above and Archon-and-below models use 28,665 and 35,522 respectively. Rank-specific models are pretrained on all ranks and then fine-tuned. Research commands and data structures remain under `d2draft/`. To collect new data, set `OPENDOTA_API_KEY` in your own `.env` and specify an explicit request budget. Never commit `.env`.
 
 Primary offline metrics:
 
-- Policy: Hit@5, Hit@10, MRR, and median rank;
-- Value: AUC, Log Loss, Brier Score, Accuracy, and ECE;
+- Outcome: AUC, Log Loss, Brier Score, Accuracy, and ECE by round;
+- Recommendation: historical top-1/5/10 win-rate association, sample size, and confidence interval;
+- Policy: Hit@5, Hit@10, MRR, and median rank, used only as a behavior diagnostic;
 - Data is split chronologically, with newer matches reserved for final testing;
 - Reports include the no-lineup pick-frequency list so the neural network is not judged only by absolute numbers.
 
@@ -214,7 +216,7 @@ Primary offline metrics:
 - A small number of matches have incomplete `picks_bans`; the collector marks them invalid;
 - The MVP treats every hero as globally unique and does not fully simulate repicks after simultaneous duplicate attempts;
 - New Dota UI layouts, scaling, or aspect ratios may require vision recalibration;
-- Win-rate tendency is primarily a ranking signal, not a precise personal win-probability forecast.
+- Candidate win probability is a relative ranking signal, not a precise personal win-probability forecast.
 
 ### License and notices
 

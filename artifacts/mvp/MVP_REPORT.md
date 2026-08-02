@@ -1,8 +1,9 @@
 # Dota 2 BP Helper — Free-data MVP report
 
 > Historical report for the original 1,966-match ordered-BP checkpoint. The current
-> production model uses 23,892 ordered matches; see
-> `artifacts/checkpoints/ordered_23892/CHECKPOINT_REPORT.md`.
+> production recommender now uses a candidate-conditioned Outcome objective trained
+> on 66,515 ordered matches. See `artifacts/models/BENCHMARK.md`; the Policy/Value
+> blend below is retained only as development history.
 
 Generated: 2026-08-01
 

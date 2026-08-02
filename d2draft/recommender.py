@@ -8,6 +8,7 @@ from typing import Iterable
 
 import numpy as np
 
+from .outcome import OutcomeEmbeddingModel
 from .state import DraftState
 
 
@@ -138,6 +139,7 @@ class Recommendation:
     combined_score: float
     policy_probability: float
     value_log_odds_delta: float
+    predicted_win_probability: float | None = None
 
 
 class HybridRecommender:
@@ -156,6 +158,24 @@ class HybridRecommender:
         self.policy_w2 = artifact["policy_w2"].astype(np.float64)
         self.policy_b2 = artifact["policy_b2"].astype(np.float64)
         self.catalog = catalog
+        outcome_keys = {
+            "outcome_candidate_bias",
+            "outcome_state_strength",
+            "outcome_synergy_candidate",
+            "outcome_synergy_ally",
+            "outcome_counter_candidate",
+            "outcome_counter_enemy",
+            "outcome_phase_bias",
+        }
+        self.outcome_model = (
+            OutcomeEmbeddingModel.from_artifact(artifact)
+            if outcome_keys.issubset(set(artifact.files))
+            else None
+        )
+
+    @property
+    def objective(self) -> str:
+        return "outcome" if self.outcome_model is not None else "legacy_hybrid"
 
     def _policy_logits(self, state: DraftState) -> tuple[np.ndarray, str]:
         if state.phase == 1:
@@ -181,8 +201,17 @@ class HybridRecommender:
             index = self.hero_to_index.get(hero)
             if index is not None:
                 legal[index] = False
-        value_delta = self.value_weight * self.hero_strength
-        combined = _zscore_legal(policy, legal) + value_blend * _zscore_legal(value_delta, legal)
+        if self.outcome_model is not None:
+            allies = [self.hero_to_index[hero] for hero in state.allies if hero in self.hero_to_index]
+            enemies = [self.hero_to_index[hero] for hero in state.enemies if hero in self.hero_to_index]
+            value_delta = self.outcome_model.score_state(allies, enemies, state.phase)
+            combined = np.log(
+                np.clip(value_delta, 1e-7, 1.0 - 1e-7)
+                / np.clip(1.0 - value_delta, 1e-7, 1.0)
+            )
+        else:
+            value_delta = self.value_weight * self.hero_strength
+            combined = _zscore_legal(policy, legal) + value_blend * _zscore_legal(value_delta, legal)
         combined[~legal] = -1e9
         legal_policy = policy.copy()
         legal_policy[~legal] = -1e9
@@ -211,7 +240,16 @@ class HybridRecommender:
                     roles=info.roles,
                     combined_score=float(combined[index]),
                     policy_probability=float(probability[index]),
-                    value_log_odds_delta=float(value_delta[index]),
+                    value_log_odds_delta=(
+                        float(combined[index])
+                        if self.outcome_model is not None
+                        else float(value_delta[index])
+                    ),
+                    predicted_win_probability=(
+                        float(value_delta[index])
+                        if self.outcome_model is not None
+                        else None
+                    ),
                 )
             )
             if len(result) >= top_k:

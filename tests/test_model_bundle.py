@@ -22,6 +22,11 @@ class ModelBundleTest(unittest.TestCase):
         self.assertEqual(len(bundle.short_hash), 12)
         self.assertTrue(bundle.report)
         self.assertTrue(bundle.backtest)
+        self.assertTrue(bundle.outcome_benchmark)
+        self.assertEqual(
+            bundle.manifest["recommendation_objective"],
+            "maximize predicted match win probability",
+        )
 
     def test_rank_specific_bundles_declare_their_training_population(self) -> None:
         catalog = HeroCatalog(ROOT / "data" / "heroes.json")
@@ -35,9 +40,11 @@ class ModelBundleTest(unittest.TestCase):
                 expected_hero_ids=catalog.by_id,
             )
             policy = bundle.report["policy"]
+            outcome = bundle.report["outcome"]
             self.assertEqual(bundle.rank_bracket_id, bracket_id)
             self.assertGreater(int(policy["train_matches"]), 10_000)
             self.assertGreater(int(policy["test_matches"]), 1_000)
+            self.assertGreater(int(outcome["train_examples"]), 200_000)
 
 
 if __name__ == "__main__":

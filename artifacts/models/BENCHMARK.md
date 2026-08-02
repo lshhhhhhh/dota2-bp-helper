@@ -1,102 +1,101 @@
-# Dota 2 BP Helper 离线 Benchmark
+# Dota 2 BP Helper 胜负导向 Benchmark
 
-以下数字来自当前随 App 发布的 Dota 7.41 模型和按时间留出的测试集。
+模型目标已经从“预测玩家会选什么”改为：
 
-## 历史胜率关联（不能解释为因果提升）
+`P(获胜 | 当前公开阵容, 候选英雄, BP轮次)`
 
-“推荐前 N 内”表示真实最后一手落在模型推荐前 N 名。不同组不是随机分配，玩家、
-位置和阵容难度都可能造成差异，所以表格只描述历史关联，不能声称模型让胜率提高了
-相同数值。
+胜方的五个选择得到标签 1，败方的五个选择得到标签 0。Policy 仍用于预测玩家
+行为，但不再决定推荐排序。
 
-| 模型人群 | 范围 | 范围内胜率 | 范围外胜率 | 观察差值 | 范围内样本 | 粗略 95% 区间 |
-|---|---:|---:|---:|---:|---:|---:|
-| 传奇及以上 | 前5 | 50.80% | 49.74% | +1.06 点 | 1,185 | -2.21～+4.33 |
-| 传奇及以上 | 前10 | 51.29% | 49.12% | +2.17 点 | 1,979 | -0.69～+5.02 |
-| 统帅及以下 | 前5 | 51.13% | 49.61% | +1.52 点 | 1,551 | -1.37～+4.40 |
-| 统帅及以下 | 前10 | 51.23% | 49.15% | +2.08 点 | 2,477 | -0.48～+4.64 |
-| 全段位 | 前5 | 50.60% | 49.80% | +0.80 点 | 2,840 | -1.33～+2.92 |
-| 全段位 | 前10 | 50.50% | 49.64% | +0.85 点 | 4,717 | -1.01～+2.72 |
+## 时间留出测试
 
-三个区间都跨过零，因此当前不能把观察差值宣传成已证实的胜率提升。
+所有模型只使用较早的 80% 比赛训练。下表使用各分段最新的 10% 比赛；这些比赛
+没有参与模型训练或参数选择。
 
-## 阵容条件推荐能力
+| 模型 | 测试比赛 | 第三轮 AUC | 只看英雄总体胜率 AUC | 公开阵容 AUC 增量 | LogLoss | 校准误差 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 传奇及以上 | 2,867 | 0.561 | 0.522 | +0.039 | 0.688 | 0.014 |
+| 统帅及以下 | 3,553 | 0.574 | 0.552 | +0.021 | 0.685 | 0.009 |
+| 全段位 | 6,652 | 0.569 | 0.534 | +0.035 | 0.686 | 0.007 |
 
-这里比较“读取双方已选英雄的阵容模型”和“完全不看阵容、只按该分段常见选择排序”。
-前 10 覆盖率表示真实玩家下一手出现在推荐前十中的比例。
+AUC 为 0.5 等于随机。三套模型都从公开 4v4 阵容中获得了英雄总体胜率之外的
+胜负信息。LogLoss 和校准误差越低越好。
 
-| 模型人群 | 轮次 | 阵容模型前10 | 不看阵容榜前10 | 每100次多覆盖 |
-|---|---:|---:|---:|---:|
-| 传奇及以上 | 第一轮 | 34.09% | 34.34% | -0.25 |
-| 传奇及以上 | 第二轮 | 24.69% | 23.52% | +1.17 |
-| 传奇及以上 | 第三轮 | 40.57% | 29.09% | +11.48 |
-| 统帅及以下 | 第一轮 | 34.11% | 34.11% | +0.00 |
-| 统帅及以下 | 第二轮 | 24.23% | 22.96% | +1.28 |
-| 统帅及以下 | 第三轮 | 40.83% | 33.76% | +7.07 |
-| 全段位 | 第一轮 | 34.16% | 34.16% | +0.00 |
-| 全段位 | 第二轮 | 24.72% | 22.96% | +1.75 |
-| 全段位 | 第三轮 | 41.65% | 31.59% | +10.06 |
+## 第三轮历史胜率关联
 
-第一轮双方都没有阵容信息，使用常见选择榜是预期行为。第三轮已有公开 4v4 阵容，
-阵容模型的优势最明显。
+“前五内”表示真实玩家的最后一手落在模型推荐前五名。这仍不是随机实验，但比旧的
+“预测玩家选择”指标更接近产品目标。
 
-## 怎样验证真实胜率提升
+| 模型 | 前五内胜率 | 前五外胜率 | 观察差值 | 前五内样本 | 粗略 95% 区间 | 旧选择预测模型差值 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 传奇及以上 | 56.7% | 49.4% | +7.3 点 | 471 | +2.6～+12.0 | +3.5 点 |
+| 统帅及以下 | 60.0% | 48.9% | +11.1 点 | 702 | +7.2～+14.9 | +2.9 点 |
+| 全段位 | 57.1% | 49.2% | +7.9 点 | 1,280 | +5.0～+10.7 | +1.8 点 |
 
-公开比赛只能观测实际选择和结果，无法知道同一局改选另一个英雄会怎样。若要声称
-实际胜率从 50% 提升至 53%，需要预先定义的随机对照实验；理想 1:1 分组、95%
-显著性和 80% 检验功效下约需 8,700 场完成对局，推荐未被采纳时还需要更多样本。
+## 能说什么，不能说什么
+
+- 可以说：模型在未参与训练的新比赛上具有第三轮胜负预测能力；公开阵容带来了
+  可测量的 AUC 增量。
+- 可以说：历史上真实选择落在新模型前五时，观察到更高胜率。
+- 不能说：App 已经被证明让用户胜率提高 7～11 个百分点。
+- 原因：玩家、位置、熟练度和选择并非随机分配；没有选择的英雄也没有真实结果。
+
+真正验证因果提升仍需要预先定义的在线随机对照实验。若检验胜率从 50% 提高到
+53%，理想 1:1 分组、95% 显著性和 80% 功效下约需 8,700 场完成对局。
+
+完整机器可读结果位于各模型目录的 `outcome_benchmark.json`。
 
 ---
 
-# Dota 2 BP Helper Offline Benchmark (English)
+# Dota 2 BP Helper Outcome Benchmark
 
-These figures come from the Dota 7.41 models bundled with the app and a
-chronologically held-out test set.
+The recommendation objective is now:
 
-## Historical win-rate association (not a causal estimate)
+`P(win | public lineup, candidate hero, draft round)`
 
-“Inside top N” means the actual final pick appeared among the model's top N
-recommendations. Players, roles, and lineup difficulty were not randomly assigned,
-so these figures describe historical association and must not be presented as an
-equal causal win-rate improvement.
+All five picks on the winning side receive label 1, and all five picks on the losing
+side receive label 0. Policy remains a player-behavior model but no longer determines
+the recommendation ranking.
 
-| Model population | Range | Win rate inside | Win rate outside | Observed difference | Inside samples | Approx. 95% interval |
+## Chronological holdout
+
+Each model is trained only on the oldest 80% of its matches. The table below uses the
+newest 10%, which is not used for training or parameter selection.
+
+| Model | Test matches | Round-3 AUC | Hero win-rate-only AUC | Public-lineup AUC gain | LogLoss | Calibration error |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Legend and above | Top 5 | 50.80% | 49.74% | +1.06 points | 1,185 | -2.21 to +4.33 |
-| Legend and above | Top 10 | 51.29% | 49.12% | +2.17 points | 1,979 | -0.69 to +5.02 |
-| Archon and below | Top 5 | 51.13% | 49.61% | +1.52 points | 1,551 | -1.37 to +4.40 |
-| Archon and below | Top 10 | 51.23% | 49.15% | +2.08 points | 2,477 | -0.48 to +4.64 |
-| All ranks | Top 5 | 50.60% | 49.80% | +0.80 points | 2,840 | -1.33 to +2.92 |
-| All ranks | Top 10 | 50.50% | 49.64% | +0.85 points | 4,717 | -1.01 to +2.72 |
+| Legend and above | 2,867 | 0.561 | 0.522 | +0.039 | 0.688 | 0.014 |
+| Archon and below | 3,553 | 0.574 | 0.552 | +0.021 | 0.685 | 0.009 |
+| All ranks | 6,652 | 0.569 | 0.534 | +0.035 | 0.686 | 0.007 |
 
-All three intervals cross zero. The current evidence therefore does not establish a
-causal win-rate improvement.
+An AUC of 0.5 is random. All three models extract outcome information from the public
+4v4 lineup beyond global hero win rate. Lower LogLoss and calibration error are better.
 
-## Lineup-conditioned recommendation ability
+## Historical round-3 win-rate association
 
-This compares the lineup-aware model against a list that ignores the lineup and
-ranks only the most frequent picks in the same bracket. Hit@10 is the share of actual
-next picks found in the first ten recommendations.
+“Inside top five” means the actual last pick appeared in the model's first five
+recommendations. This is still not a randomized experiment, but it is aligned more
+closely with the product goal than the old pick-prediction metric.
 
-| Model population | Round | Lineup model Hit@10 | No-lineup list Hit@10 | Extra hits per 100 |
-| --- | ---: | ---: | ---: | ---: |
-| Legend and above | 1 | 34.09% | 34.34% | -0.25 |
-| Legend and above | 2 | 24.69% | 23.52% | +1.17 |
-| Legend and above | 3 | 40.57% | 29.09% | +11.48 |
-| Archon and below | 1 | 34.11% | 34.11% | +0.00 |
-| Archon and below | 2 | 24.23% | 22.96% | +1.28 |
-| Archon and below | 3 | 40.83% | 33.76% | +7.07 |
-| All ranks | 1 | 34.16% | 34.16% | +0.00 |
-| All ranks | 2 | 24.72% | 22.96% | +1.75 |
-| All ranks | 3 | 41.65% | 31.59% | +10.06 |
+| Model | Win rate inside top 5 | Outside top 5 | Observed difference | Inside samples | Approx. 95% interval | Old pick-model difference |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Legend and above | 56.7% | 49.4% | +7.3 pts | 471 | +2.6 to +12.0 | +3.5 pts |
+| Archon and below | 60.0% | 48.9% | +11.1 pts | 702 | +7.2 to +14.9 | +2.9 pts |
+| All ranks | 57.1% | 49.2% | +7.9 pts | 1,280 | +5.0 to +10.7 | +1.8 pts |
 
-There is no lineup information in round 1, so using the pick-frequency list is
-expected. The lineup-aware model has its clearest advantage in round 3, after a public
-4v4 lineup is available.
+## What these results do and do not establish
 
-## How to verify a real win-rate improvement
+- Supported: the model predicts round-3 outcomes on newer, unseen matches, and public
+  lineup information produces a measurable AUC gain.
+- Supported: actual picks inside the new top five have a higher observed historical
+  win rate.
+- Not supported: the app has been proven to raise a user's win rate by 7–11 points.
+- Why: players, roles, proficiency, and picks were not randomly assigned, and unchosen
+  heroes have no observed outcome.
 
-Public match data observes only the chosen hero and outcome; it cannot reveal what
-the same match would have looked like with another pick. A claim that the app raises
-win rate from 50% to 53% requires a pre-registered randomized controlled experiment.
-With ideal 1:1 assignment, 95% significance and 80% power, roughly 8,700 completed
-matches are needed, and more are required when users do not follow recommendations.
+A pre-registered online randomized trial is still required for causal validation. To
+test an increase from 50% to 53% with ideal 1:1 assignment, 95% significance, and 80%
+power requires roughly 8,700 completed matches.
+
+Full machine-readable results are stored in each model directory's
+`outcome_benchmark.json`.

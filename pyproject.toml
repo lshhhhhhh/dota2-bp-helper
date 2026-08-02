@@ -1,6 +1,6 @@
 [project]
 name = "d2draft-mvp"
-version = "0.2.0"
+version = "0.3.0"
 description = "Phase-aware Dota 2 ranked draft research MVP"
 readme = "README.md"
 license = "MIT"

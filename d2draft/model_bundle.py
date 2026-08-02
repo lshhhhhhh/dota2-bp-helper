@@ -34,6 +34,7 @@ class ModelBundle:
     report: dict[str, Any]
     backtest: dict[str, Any]
     advantage_benchmark: dict[str, Any]
+    outcome_benchmark: dict[str, Any]
     artifact_path: Path
     hero_ids: tuple[int, ...]
 
@@ -72,6 +73,21 @@ class ModelBundle:
             "policy_w2",
             "policy_b2",
         }
+        if (
+            manifest.get("recommendation_objective")
+            == "maximize predicted match win probability"
+        ):
+            required_arrays.update(
+                {
+                    "outcome_candidate_bias",
+                    "outcome_state_strength",
+                    "outcome_synergy_candidate",
+                    "outcome_synergy_ally",
+                    "outcome_counter_candidate",
+                    "outcome_counter_enemy",
+                    "outcome_phase_bias",
+                }
+            )
         try:
             with np.load(artifact_path, allow_pickle=False) as artifact:
                 missing = required_arrays.difference(artifact.files)
@@ -97,6 +113,9 @@ class ModelBundle:
             backtest=_read_json(root / "backtest.json", required=False),
             advantage_benchmark=_read_json(
                 root / "advantage_benchmark.json", required=False
+            ),
+            outcome_benchmark=_read_json(
+                root / "outcome_benchmark.json", required=False
             ),
             artifact_path=artifact_path,
             hero_ids=hero_ids,
@@ -162,7 +181,7 @@ def write_model_manifest(
     manifest = {
         "format_version": 1,
         "model_id": f"mvp-{patch_label}-{rank_id}-{compact_time}",
-        "display_name": f"Dota 2 BP Hybrid · {rank_label}",
+        "display_name": f"Dota 2 BP Outcome · {rank_label}",
         "artifact": artifact.name,
         "artifact_sha256": hashlib.sha256(artifact.read_bytes()).hexdigest(),
         "created_at_utc": generated_at_utc,
@@ -174,9 +193,10 @@ def write_model_manifest(
             "minimum_avg_rank_tier": minimum_rank_tier,
             "maximum_avg_rank_tier_exclusive": maximum_rank_tier_exclusive,
         },
-        "model_family": "phase-aware hybrid recommender",
+        "model_family": "candidate-conditioned outcome recommender",
         "input_contract": "BP phase + allied hero IDs + enemy hero IDs",
-        "output_contract": "ranked legal hero IDs with policy and value scores",
+        "output_contract": "legal hero IDs ranked by predicted win probability",
+        "recommendation_objective": "maximize predicted match win probability",
     }
     (root / "model_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"

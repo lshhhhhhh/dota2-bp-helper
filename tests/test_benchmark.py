@@ -27,13 +27,19 @@ class BenchmarkTest(unittest.TestCase):
         self.assertGreater(matches, 8_000)
         self.assertLess(matches, 10_000)
 
-    def test_legend_plus_historical_advantage_report(self) -> None:
+    def test_legend_plus_outcome_benchmark(self) -> None:
         bundle = ModelBundle.load(ROOT / "artifacts" / "models" / "legend_plus")
-        benchmark = bundle.advantage_benchmark
-        top_five = benchmark["groups"]["top_5"]
-        self.assertGreater(top_five["followed_decisions"], 100)
+        benchmark = bundle.outcome_benchmark
+        metrics = benchmark["outcome_prediction_metrics"]["phase_3"]
+        baseline = benchmark["global_hero_winrate_prediction_baseline"]["phase_3"]
+        top_five = benchmark["historical_winrate_association"]["phase_3"][
+            "outcome_recommender"
+        ]["top_5"]
+        self.assertGreater(float(metrics["auc"]), float(baseline["auc"]) + 0.02)
+        self.assertGreater(top_five["followed_decisions"], 400)
         self.assertEqual(len(top_five["approximate_95_ci_points"]), 2)
-        self.assertIn("not a causal", benchmark["interpretation"])
+        self.assertGreater(float(top_five["approximate_95_ci_points"][0]), 0.0)
+        self.assertIn("not causal", benchmark["interpretation"])
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 
 from .model_bundle import write_model_manifest
+from .outcome import OutcomeEmbeddingModel, outcome_examples
 from .patches import install_patch_schema
 
 from .metrics import binary_metrics
@@ -233,7 +234,7 @@ def load_policy_rows(
     )
     return connection.execute(
         f"""
-        SELECT match_id, start_time,
+        SELECT match_id, start_time, radiant_win,
                phase_1_radiant, phase_1_dire,
                phase_2_radiant, phase_2_dire,
                phase_3_radiant, phase_3_dire
@@ -447,6 +448,31 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         policy_model.logits(test_x, test_used), test_target, test_phase
     )
 
+    outcome_train = outcome_examples(policy_train_rows, hero_to_index)
+    outcome_test = outcome_examples(policy_test_rows, hero_to_index)
+    outcome_model = OutcomeEmbeddingModel.create(
+        len(heroes), args.outcome_dimensions, rng
+    )
+    outcome_model.fit(
+        outcome_train,
+        epochs=args.outcome_epochs,
+        batch_size=1024,
+        learning_rate=2e-3,
+        l2=2e-4,
+        rng=rng,
+    )
+    outcome_probability = outcome_model.predict(outcome_test)
+    outcome_metrics = {
+        "overall": binary_metrics(outcome_test.outcome, outcome_probability),
+        **{
+            f"phase_{phase_number}": binary_metrics(
+                outcome_test.outcome[outcome_test.phase == phase_number],
+                outcome_probability[outcome_test.phase == phase_number],
+            )
+            for phase_number in (1, 2, 3)
+        },
+    }
+
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
@@ -470,6 +496,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         policy_b1=policy_model.parameters["b1"],
         policy_w2=policy_model.parameters["w2"],
         policy_b2=policy_model.parameters["b2"],
+        **outcome_model.artifact_parameters(),
     )
     generated_at_utc = datetime.now(UTC).isoformat()
     report = {
@@ -496,9 +523,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "baseline": policy_baseline,
             "neural": policy_neural,
         },
+        "outcome": {
+            "objective": "predict win probability for every candidate given the public draft state",
+            "architecture": "candidate-conditioned embedding interaction network",
+            "train_examples": len(outcome_train),
+            "test_examples": len(outcome_test),
+            "embedding_dimensions": args.outcome_dimensions,
+            "metrics": outcome_metrics,
+        },
         "limitations": [
             "The policy sample is intentionally small and is only a signal check.",
             "Observed player picks are not a unique ground-truth optimal recommendation.",
+            "Unchosen candidate outcomes are counterfactual and must be estimated by generalization.",
             "The public match sample is visibility-biased.",
             "No role, lane, player proficiency, or expert tags are used.",
         ],
@@ -526,6 +562,8 @@ def main() -> None:
     parser.add_argument("--policy-hidden", type=int, default=96)
     parser.add_argument("--value-epochs", type=int, default=25)
     parser.add_argument("--policy-epochs", type=int, default=35)
+    parser.add_argument("--outcome-dimensions", type=int, default=16)
+    parser.add_argument("--outcome-epochs", type=int, default=12)
     parser.add_argument(
         "--min-rank-tier",
         type=int,
