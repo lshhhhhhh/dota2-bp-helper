@@ -252,9 +252,14 @@ class HybridRecommender:
         """How far this draft moved human preference, net of a hero's popularity.
 
         ``log P(hero | this draft) - log P(hero | this round)``. A hero that is
-        merely rare scores zero; one that players drop *because of what is already
-        on the board* scores strongly negative, which is the only trace the data
-        keeps of heroes clashing with each other.
+        merely rare scores zero, so this promotes what the board asks for rather
+        than what is popular.
+
+        It does not detect heroes clashing. A hero can lose most of its appeal to
+        the board and still sit above its own baseline: a second farm-hungry carry
+        behind Spectre drops 7x in pick probability yet still scores positive here,
+        because it remains likelier than that hero's average round. Such a pick
+        falls down the list only because better-fitting heroes rise past it.
         """
 
         def normalize(values: np.ndarray) -> np.ndarray:
