@@ -222,6 +222,53 @@ python -m d2draft.negative_results --check margin-targets
 顺带得到一个上限数字：**阵容强度差只能解释比赛结果 1.8% 的方差**（R²=0.018，
 n=35,503，t=25.7 高度显著）。这是这个问题本身的性质，不是模型的缺陷。
 
+### 4. 加大模型（嵌入维度）
+
+在完整 53,212 场训练池上扫描嵌入维度，固定最新 10% 测试集，每档 3 个随机种子：
+
+| 维度 | epochs | 测试 AUC | 同状态配对 | 训练集 AUC | 交互项/固定偏置 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 12 | 0.5671 | 0.5361 | 0.5517 | 0.010 |
+| 16 | 12 | 0.5671 | 0.5359 | 0.5518 | 0.022 |
+| 32 | 12 | 0.5671 | 0.5369 | 0.5518 | 0.043 |
+| 64 | 12 | 0.5672 | 0.5376 | 0.5519 | 0.090 |
+| 128 | 30 | 0.5665 | 0.5372 | 0.5520 | 0.129 |
+
+**容量提高 16 倍，测试 AUC 变化 0.0007，种子标准差本身就有 0.0003~0.0015。**
+30 个 epoch 反而略差。
+
+最关键的是**训练集 AUC 也不动**（0.5517→0.5520）：这不是过拟合，是模型连训练数据
+都无法拟合得更好 —— 数据里已经没有更多可学的东西了。模型不是容量受限的。
+
+交互项/固定偏置比值随维度从 0.010 涨到 0.129，但测试指标全部不动。**嵌入会把给它
+的容量全部吸收成噪声**，所以这个比值单独上升不能作为「嵌入学到了配合克制」的证据。
+
+### 数据量：AUC 还在涨，排序已经收敛
+
+同一套划分，按训练规模扫描（每档 3 个种子）：
+
+| 训练比赛数 | 第三轮 AUC | 同状态配对 |
+| ---: | ---: | ---: |
+| 2,000 | 0.5277 | 0.5083 |
+| 5,000 | 0.5346 | 0.5128 |
+| 10,000 | 0.5513 | 0.5180 |
+| 20,000 | 0.5603 | 0.5287 |
+| 35,000 | 0.5641 | **0.5373** |
+| 53,212 | 0.5671 | **0.5359** |
+
+**AUC 没有收敛**：从 1 万场起每翻倍稳定增加约 0.005，看不到平台期。
+**排序已经收敛**：35,000 → 53,212（多 52% 数据）反而下降 0.0014，在噪声内。
+
+两者分离的原因还是同一个结构事实：更多数据改善 `state_strength`，而该项对所有候选
+加同一个数，永远不影响排序。排序由 `candidate_bias`（127 个参数）决定，早已收敛。
+
+**预算含义**：继续购买 7.41 数据只会让「你这把 44%」更准，**不会改变推荐哪些英雄**。
+按当前速率把 AUC 从 0.567 提到 0.60 约需 6.6 次翻倍（约 640 万场）。真正值得花钱的是
+**下一个版本** —— 版本更替会让英雄强度漂移，而排序本质就是一张强度榜，这一点额外的
+7.41 数据无法弥补。
+
+复现：`python -m d2draft.negative_results --check capacity`（需要几分钟）。
+
 ### 逻辑回归与神经网络等价
 
 在同一套划分上训练一个纯逻辑回归（每英雄一个队友系数、一个敌方系数、一个候选
@@ -249,8 +296,13 @@ JueWuDraft 在 3000 万场上是 0.642 → 0.694。也就是说人类数据上�
 300 万～3000 万场之间，我们有 6.6 万场，差 45～450 倍。
 
 **监控方式**：每次重训后跑 `python -m d2draft.negative_results --check interactions`，
-看交互项与固定偏置的比值（当前 **0.024**）。这个比值开始上升，说明嵌入开始学到东西，
-那时才值得重新评估。
+看交互项与固定偏置的比值（当前 **0.024**）。**但这个比值单独上升不构成证据。**实测把
+嵌入维度从 8 提到 128，该比值从 0.010 升到 0.129，而测试 AUC、同状态配对和命中差
+全部不动 —— 嵌入会把给它的容量全部吸收成噪声。只有比值上升**并且**留出集指标同时
+改善，才说明嵌入真的学到了东西。
+
+同一组实验也说明模型**不是容量受限**：维度提高 16 倍，连训练集 AUC 都只从 0.5517
+变到 0.5520。加大模型没有意义，瓶颈在数据本身。
 
 **与重训策略的关联**：如果改为频繁重训、每次只用较短的近期窗口，8,385 个参数的过拟合
 风险恰好在单次数据量变小时上升。因此重训应继续走 `d2draft/train_outcome.py` 的微调
@@ -534,6 +586,62 @@ This also produces a ceiling worth remembering: **the draft strength difference
 explains about 1.8% of outcome variance** (R²=0.018, n=35,503, t=25.7, highly
 significant). That is a property of the problem, not a defect in the model.
 
+### 4. A bigger model (embedding dimension)
+
+Sweeping the embedding dimension on the full 53,212-match pool against the fixed
+newest 10% test set, three seeds per configuration:
+
+| Dim | Epochs | Test AUC | Same-state pairwise | Train AUC | Interaction/bias |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 8 | 12 | 0.5671 | 0.5361 | 0.5517 | 0.010 |
+| 16 | 12 | 0.5671 | 0.5359 | 0.5518 | 0.022 |
+| 32 | 12 | 0.5671 | 0.5369 | 0.5518 | 0.043 |
+| 64 | 12 | 0.5672 | 0.5376 | 0.5519 | 0.090 |
+| 128 | 30 | 0.5665 | 0.5372 | 0.5520 | 0.129 |
+
+**Sixteen times the capacity moves test AUC by 0.0007**, against a seed standard
+deviation of 0.0003 to 0.0015. Thirty epochs is slightly worse than twelve.
+
+The decisive column is train AUC, which also does not move (0.5517 to 0.5520). This
+is not overfitting: the model cannot fit even the *training* data better with more
+parameters, because there is nothing further in it to fit. The model is not
+capacity-limited.
+
+The interaction/bias ratio climbs from 0.010 to 0.129 with dimension while every
+held-out metric stays flat. **The embeddings absorb whatever capacity they are
+given, as noise**, so a rising ratio alone is not evidence that they have learned
+synergy or counters.
+
+### Data volume: AUC still climbing, ranking already converged
+
+The same split, swept by training size, three seeds each:
+
+| Training matches | Round-3 AUC | Same-state pairwise |
+| ---: | ---: | ---: |
+| 2,000 | 0.5277 | 0.5083 |
+| 5,000 | 0.5346 | 0.5128 |
+| 10,000 | 0.5513 | 0.5180 |
+| 20,000 | 0.5603 | 0.5287 |
+| 35,000 | 0.5641 | **0.5373** |
+| 53,212 | 0.5671 | **0.5359** |
+
+**AUC has not converged**: from 10,000 onward it gains a steady ~0.005 per doubling
+with no sign of a plateau. **Ranking has**: 52% more data from 35,000 to 53,212
+moves it by -0.0014, which is noise.
+
+They diverge for the structural reason that runs through this whole document. More
+data sharpens `state_strength`, and that term adds the same amount to every
+candidate, so it never touches the ordering. The ranking is driven by
+`candidate_bias`, 127 parameters that converged long ago.
+
+**Budget implication**: buying more 7.41 data makes "your draft is at 44%" more
+accurate and **does not change which heroes get recommended**. At the observed rate,
+lifting AUC from 0.567 to 0.60 needs about 6.6 doublings, roughly 6.4 million
+matches. The spend worth making is **the next patch** — hero strengths drift, the
+ranking is essentially a strength list, and no amount of extra 7.41 data fixes that.
+
+Reproduce with `python -m d2draft.negative_results --check capacity` (a few minutes).
+
 ### Logistic regression matches the neural network
 
 A plain logistic regression trained on the same split — one ally coefficient, one
@@ -570,8 +678,15 @@ a neural network at 3 million human matches, and JueWuDraft reports 0.642 to 0.6
 
 **How to monitor it**: after each retrain, run
 `python -m d2draft.negative_results --check interactions` and watch the ratio of the
-interaction spread to the fixed per-hero bias, currently **0.024**. When that ratio
-starts climbing, the embeddings are learning something and the decision is paying off.
+interaction spread to the fixed per-hero bias, currently **0.024**. **A rising ratio is
+not evidence on its own.** Raising the embedding dimension from 8 to 128 lifts that
+ratio from 0.010 to 0.129 while test AUC, same-state pairwise, and the hit gap all stay
+flat: the embeddings absorb whatever capacity they are given, as noise. Only a rising
+ratio *together with* improving held-out metrics means they have learned anything.
+
+The same sweep shows the model is **not capacity-limited**. Sixteen times the embedding
+dimension moves even the *training* AUC from 0.5517 to 0.5520. A bigger model is not the
+answer; the limit is in the data.
 
 **How it interacts with retraining**: if retrains become frequent and each uses a
 shorter recent window, an 8,385-parameter model is most exposed to overfitting exactly

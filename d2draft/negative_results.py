@@ -7,6 +7,7 @@ the work. All three need the private collection database, which is never shipped
     python -m d2draft.negative_results --check interactions
     python -m d2draft.negative_results --check composition
     python -m d2draft.negative_results --check margin-targets
+    python -m d2draft.negative_results --check capacity
 """
 
 from __future__ import annotations
@@ -223,10 +224,109 @@ def margin_targets(artifact_path: str, raw_path: str, limit: int = 40_000, **_: 
     print("skill-gap and duration variance, which is noise for this purpose.")
 
 
+def capacity(database: str = "data/collection/draft_matches.sqlite3", **_: Any) -> None:
+    """More data still helps outcome AUC; more parameters help nothing.
+
+    Takes a few minutes: it trains a model per configuration on the full pool.
+    """
+
+    import sqlite3
+
+    from .experiment import load_policy_rows
+    from .metrics import binary_metrics
+    from .outcome import OutcomeEmbeddingModel, outcome_examples
+    from .ranking_benchmark import (
+        _batched_scores,
+        legal_mask,
+        ranking_examples,
+        same_state_pairwise,
+    )
+    from .recommender import HeroCatalog
+
+    catalog = HeroCatalog("data/heroes.json")
+    heroes = sorted(catalog.by_id)
+    lookup = {hero: index for index, hero in enumerate(heroes)}
+    connection = sqlite3.connect(database)
+    connection.row_factory = sqlite3.Row
+    rows = load_policy_rows(connection, ("7.41",))
+    connection.close()
+
+    pool = rows[: int(len(rows) * 0.8)]
+    test = ranking_examples(rows[int(len(rows) * 0.9) :], lookup)
+    legal = legal_mask(test.examples, len(heroes))
+    final = test.examples.phase == 3
+    labels = test.examples.outcome[final].astype(float)
+    chosen = test.examples.candidate[final].astype(int)
+    positions = np.arange(len(test))[final]
+
+    def score(model) -> tuple[float, float]:
+        predictions = _batched_scores(model, test.examples, len(heroes))
+        return (
+            binary_metrics(labels, predictions[positions, chosen])["auc"],
+            same_state_pairwise(test, predictions, legal)["accuracy"],
+        )
+
+    def train(matches: int, dimensions: int, seed: int):
+        picked = np.sort(
+            np.random.default_rng(1000 + seed).permutation(len(pool))[:matches]
+        )
+        examples = outcome_examples([pool[i] for i in picked], lookup)
+        model = OutcomeEmbeddingModel.create(
+            len(heroes), dimensions, np.random.default_rng(seed)
+        )
+        model.fit(
+            examples,
+            epochs=12,
+            batch_size=1024,
+            learning_rate=0.002,
+            l2=0.0002,
+            rng=np.random.default_rng(seed),
+        )
+        return model
+
+    print(f"pool {len(pool):,} matches, fixed newest 10% test\n")
+    print("more data (16 dimensions):")
+    print(f"  {'matches':>10}{'AUC':>9}{'pairwise':>10}")
+    for matches in (5_000, 20_000, len(pool)):
+        results = [score(train(matches, 16, seed)) for seed in range(2)]
+        auc, pair = np.mean([r[0] for r in results]), np.mean([r[1] for r in results])
+        print(f"  {matches:>10,}{auc:>9.4f}{pair:>10.4f}")
+
+    print("\nmore parameters (full pool):")
+    print(f"  {'dimensions':>11}{'AUC':>9}{'pairwise':>10}{'inter/bias':>12}")
+    for dimensions in (8, 32, 128):
+        aucs, pairs, ratios = [], [], []
+        for seed in range(2):
+            model = train(len(pool), dimensions, seed)
+            auc, pair = score(model)
+            aucs.append(auc)
+            pairs.append(pair)
+            parameters = model.parameters
+            rng = np.random.default_rng(0)
+            spread = []
+            for _ in range(200):
+                drafted = rng.choice(len(heroes), size=8, replace=False)
+                value = parameters["synergy_ally"][drafted[:4]].sum(0) @ parameters[
+                    "synergy_candidate"
+                ].T
+                value = value + parameters["counter_enemy"][drafted[4:]].sum(
+                    0
+                ) @ parameters["counter_candidate"].T
+                spread.append(value.std())
+            ratios.append(np.mean(spread) / parameters["candidate_bias"].std())
+        print(
+            f"  {dimensions:>11}{np.mean(aucs):>9.4f}{np.mean(pairs):>10.4f}"
+            f"{np.mean(ratios):>12.3f}"
+        )
+    print("\nAUC rises with data and not with parameters. The interaction ratio rises")
+    print("with dimensions alone, so it is not evidence that the embeddings learned.")
+
+
 CHECKS = {
     "interactions": interactions,
     "composition": composition,
     "margin-targets": margin_targets,
+    "capacity": capacity,
 }
 
 
@@ -236,9 +336,13 @@ def main() -> None:
     parser.add_argument("--artifact", default=DEFAULT_ARTIFACT)
     parser.add_argument("--raw", default=DEFAULT_RAW)
     parser.add_argument("--limit", type=int, default=40_000)
+    parser.add_argument("--database", default="data/collection/draft_matches.sqlite3")
     arguments = parser.parse_args()
     CHECKS[arguments.check](
-        artifact_path=arguments.artifact, raw_path=arguments.raw, limit=arguments.limit
+        artifact_path=arguments.artifact,
+        raw_path=arguments.raw,
+        limit=arguments.limit,
+        database=arguments.database,
     )
 
 
