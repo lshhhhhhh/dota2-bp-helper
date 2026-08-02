@@ -213,7 +213,23 @@ n=35,503，t=25.7 高度显著）。这是这个问题本身的性质，不是�
 梯度榜代替 —— 阵容评估功能依赖校准过的概率。逻辑回归等于一张校准过的梯度榜。
 
 保留：这个逻辑回归是在临时脚本里训的，只试了一组 L2，没调参，只跑了全段位。
-真要替换必须先在验证集上调参并在三个分段上验证。
+
+**决定：保留神经网络，不换逻辑回归。**理由是逻辑回归在结构上**永远**无法表达交互，
+数据再多也没用；而神经网络的 synergy/counter 项已经存在，只是在当前数据量下被正则
+压住了，数据增长后重调 L2 就能放开。今天两者打平，所以持有这个选择权不花任何成本，
+而迁移要动 bundle 格式、推荐器和重训流程，换来的是零。
+
+作为对照：RecSys 2018 在 300 万场人类对局上，逻辑回归与神经网络仍只差 0.03 AUC；
+JueWuDraft 在 3000 万场上是 0.642 → 0.694。也就是说人类数据上的实质增益出现在
+300 万～3000 万场之间，我们有 6.6 万场，差 45～450 倍。
+
+**监控方式**：每次重训后跑 `python -m d2draft.negative_results --check interactions`，
+看交互项与固定偏置的比值（当前 **0.024**）。这个比值开始上升，说明嵌入开始学到东西，
+那时才值得重新评估。
+
+**与重训策略的关联**：如果改为频繁重训、每次只用较短的近期窗口，8,385 个参数的过拟合
+风险恰好在单次数据量变小时上升。因此重训应继续走 `d2draft/train_outcome.py` 的微调
+路径（从上一版模型热启动），而不是在短窗口上从零训练。
 
 ### 已明确排除的产品方向
 
@@ -481,8 +497,31 @@ cannot simply replace the model — the lineup evaluation depends on calibrated
 probabilities. Logistic regression is a calibrated tier list.
 
 Caveat: this regression was fitted in a scratch script with a single L2 setting, no
-tuning, and only on the all-ranks bracket. Any real replacement must tune on the
-validation split and verify across all three brackets first.
+tuning, and only on the all-ranks bracket.
+
+**Decision: keep the neural network, do not switch to logistic regression.** Logistic
+regression structurally cannot represent interactions, so no amount of data ever helps
+it, whereas the network's synergy and counter terms already exist and are merely held
+down by regularisation at this data scale — retuning L2 releases them once data grows.
+The two tie today, so holding that option costs nothing, while migrating would touch
+the bundle format, the recommender, and the retraining pipeline for a measured gain of
+zero.
+
+For calibration: RecSys 2018 still found only 0.03 AUC between logistic regression and
+a neural network at 3 million human matches, and JueWuDraft reports 0.642 to 0.694 at
+30 million. Meaningful gains on human data therefore appear somewhere between 3M and
+30M matches, against the 66,515 available — a factor of 45 to 450.
+
+**How to monitor it**: after each retrain, run
+`python -m d2draft.negative_results --check interactions` and watch the ratio of the
+interaction spread to the fixed per-hero bias, currently **0.024**. When that ratio
+starts climbing, the embeddings are learning something and the decision is paying off.
+
+**How it interacts with retraining**: if retrains become frequent and each uses a
+shorter recent window, an 8,385-parameter model is most exposed to overfitting exactly
+when per-retrain data shrinks. Retraining should therefore keep using the fine-tuning
+path in `d2draft/train_outcome.py`, warm-starting from the previous bundle, rather
+than training from scratch on a short window.
 
 ### A product direction that is explicitly closed
 
