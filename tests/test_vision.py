@@ -7,6 +7,7 @@ from PIL import Image
 
 from d2draft.recommender import HeroCatalog
 from d2draft.vision import (
+    MINIMUM_MARGIN,
     CaptureConfig,
     PortraitMatcher,
     accepted_heroes,
@@ -80,7 +81,10 @@ class VisionTest(unittest.TestCase):
             dire = matcher.recognize_box(screenshot, config.enemies_box)
         self.assertEqual(accepted_heroes(radiant), ())
         self.assertEqual(accepted_heroes(dire), ())
-        self.assertLess(max(match.similarity for match in radiant + dire), 0.48)
+        # What keeps an empty card out is that it stays ambiguous, not that it
+        # scores low. Masking the rank banner lifts every similarity, so bounding
+        # the raw score here only pinned the old feature's scale.
+        self.assertLess(max(match.margin for match in radiant + dire), MINIMUM_MARGIN)
 
     def test_livestream_suggested_spectre_is_not_a_locked_pick(self) -> None:
         screenshot_path = ROOT / "screenshot" / "live_proposed_spectre.png"

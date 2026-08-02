@@ -216,6 +216,14 @@ def locate_windowed_viewports(
 FEATURE_ROWS = 24
 _FEATURE_SIZE = (64, 36)
 
+# An empty or dimmed card is *ambiguous*: it resembles many templates about equally,
+# so the gap to the runner-up separates it far better than raw similarity does.
+# Measured over 40 labelled slots, real heroes score a margin of 0.074 to 0.392 and
+# empty cards 0.000 to 0.084, while their similarity ranges overlap heavily. Margin
+# does the rejecting, which is why the similarity floor can sit lower than it used to.
+MINIMUM_SIMILARITY = 0.45
+MINIMUM_MARGIN = 0.09
+
 
 def _feature(image: Image.Image) -> np.ndarray:
     image = ImageOps.fit(image.convert("RGB"), _FEATURE_SIZE, method=Image.Resampling.LANCZOS)
@@ -245,14 +253,8 @@ class PortraitMatcher:
         portraits_dir: str | Path | Iterable[str | Path],
         catalog: HeroCatalog,
         *,
-        # An empty or dimmed card is *ambiguous*: it resembles many templates about
-        # equally, so the gap to the runner-up separates it far better than raw
-        # similarity does. Measured over 40 labelled slots, real heroes score a
-        # margin of 0.074 to 0.392 and empty cards 0.000 to 0.084, while their
-        # similarity ranges overlap heavily. Margin does the rejecting here, which
-        # is why the similarity floor can sit lower than it used to.
-        minimum_similarity: float = 0.45,
-        minimum_margin: float = 0.09,
+        minimum_similarity: float = MINIMUM_SIMILARITY,
+        minimum_margin: float = MINIMUM_MARGIN,
         minimum_active_contrast: float = 30.0,
     ) -> None:
         self.catalog = catalog
