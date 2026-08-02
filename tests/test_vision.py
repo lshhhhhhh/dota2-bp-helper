@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import unittest
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from d2draft.vision import (
     MINIMUM_MARGIN,
     CaptureConfig,
     PortraitMatcher,
+    _inset_image,
     accepted_heroes,
     locate_windowed_viewports,
     split_slots,
@@ -132,6 +134,55 @@ class VisionTest(unittest.TestCase):
         )
         self.assertEqual(accepted_heroes(radiant), (123, 3))
         self.assertEqual(accepted_heroes(dire), (101, 100))
+
+
+    def test_every_hero_survives_the_rank_banner(self) -> None:
+        """A drafted card is covered by a rank banner, level badge and info icon.
+
+        Those follow the player, not the hero, so they must not decide the match.
+        The overlay is lifted from a real drafted card rather than drawn, and the
+        card is shrunk and JPEG-compressed to stand in for a scaled capture.
+        """
+
+        screenshot_path = ROOT / "screenshot" / "failure_1.png"
+        if not screenshot_path.exists():
+            self.skipTest("user-provided drafted-card screenshot is not available")
+        matcher = PortraitMatcher(
+            [
+                ROOT / "data" / "hero_portraits",
+                ROOT / "data" / "game_hero_images" / "panorama" / "images" / "heroes",
+            ],
+            self.catalog,
+        )
+        with Image.open(screenshot_path) as screenshot:
+            viewport = screenshot.convert("RGB").crop(
+                locate_windowed_viewports(screenshot)[0].rect
+            )
+        config = CaptureConfig.default_for_screen(*viewport.size)
+        card = viewport.crop(split_slots(config.allies_box, 5, config.orientation)[1])
+        width, height = card.size
+        banner = card.crop((0, int(height * 0.60), width, height))
+
+        missed = []
+        for hero_id in sorted(self.catalog.by_id):
+            portrait = ROOT / "data" / "hero_portraits" / f"{hero_id}.png"
+            if not portrait.exists():
+                continue
+            with Image.open(portrait) as raw:
+                card_image = raw.convert("RGB").resize((256, 144), Image.LANCZOS)
+            overlay = int(144 * 0.40)
+            card_image.paste(
+                banner.resize((256, overlay), Image.LANCZOS), (0, 144 - overlay)
+            )
+            shrunk = card_image.resize((84, 47), Image.LANCZOS)
+            buffer = io.BytesIO()
+            shrunk.save(buffer, "JPEG", quality=70)
+            buffer.seek(0)
+            with Image.open(buffer) as degraded:
+                match = matcher.classify(_inset_image(degraded.convert("RGB")))
+            if match.hero_id != hero_id:
+                missed.append(self.catalog.info(hero_id).name)
+        self.assertEqual(missed, [])
 
 
 if __name__ == "__main__":
