@@ -4,7 +4,12 @@ import argparse
 import json
 from pathlib import Path
 
-from .recommender import HeroCatalog, HybridRecommender, resolve_many
+from .recommender import (
+    DEFAULT_CANDIDATE_POOL,
+    HeroCatalog,
+    HybridRecommender,
+    resolve_many,
+)
 from .state import DraftState
 
 
@@ -29,6 +34,16 @@ def main() -> None:
             "0 uses only observed-pick policy"
         ),
     )
+    parser.add_argument(
+        "--candidate-pool",
+        type=int,
+        default=DEFAULT_CANDIDATE_POOL,
+        help=(
+            "rank this many of the heroes players are most likely to pick ahead of "
+            "the rest; 0 disables the pool and ranks every legal hero by win "
+            "probability, which produces a nearly fixed list"
+        ),
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -50,7 +65,10 @@ def main() -> None:
         else:
             value_blend = defaults[args.phase]
     recommendations, policy_kind = recommender.recommend(
-        state, top_k=args.top_k, value_blend=value_blend
+        state,
+        top_k=args.top_k,
+        value_blend=value_blend,
+        candidate_pool=args.candidate_pool or None,
     )
     if args.json:
         print(

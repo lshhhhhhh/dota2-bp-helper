@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-02T05:12:30.729176+00:00",
+  "generated_at_utc": "2026-08-02T06:08:51.168250+00:00",
   "model_id": "mvp-7.41-legend_plus-20260802T033124",
   "rank_bracket": "传奇及以上",
   "patch": "7.41",
@@ -8,6 +8,77 @@
   "test_decisions": 28670,
   "phase": 3,
   "methods": {
+    "shipped_recommender": {
+      "phase": 3,
+      "decisions": 5734,
+      "state_responsiveness": {
+        "decisions": 4000,
+        "top_k": 5,
+        "distinct_top_1": 24,
+        "distinct_top_5": 51,
+        "heroes": 127,
+        "top_5_change_rate": 1.0,
+        "mean_spearman_vs_static": 0.2790064503655793,
+        "median_rank_swing": 66.0,
+        "max_rank_swing": 109.0
+      },
+      "same_state_pairwise": {
+        "comparisons": 5734,
+        "matches": 2867,
+        "accuracy": 0.521625392396233,
+        "approximate_95_ci": [
+          0.5086956268853511,
+          0.5345551579071148
+        ],
+        "points_above_chance": 2.1625392396232956
+      },
+      "outcome_split_hit": {
+        "top_k": 5,
+        "matches": 2867,
+        "winning_side_hit_rate": 0.18521102197418904,
+        "losing_side_hit_rate": 0.15451691663760028,
+        "difference_points": 3.069410533658877,
+        "approximate_95_ci_points": [
+          1.1362908428484173,
+          5.0025302244693375
+        ]
+      },
+      "stratified_association": {
+        "top_k": 5,
+        "strata": 10,
+        "unstratified": {
+          "followed_decisions": 974,
+          "followed_win_rate": 0.5451745379876797,
+          "other_decisions": 4760,
+          "other_win_rate": 0.4907563025210084,
+          "observed_difference_points": 5.44182354666713,
+          "approximate_95_ci_points": [
+            2.007171117231786,
+            8.876475976102473
+          ]
+        },
+        "stratified_difference_points": 5.181176442908126,
+        "followed_decisions": 974
+      },
+      "off_policy_value": {
+        "estimate": 0.512153564324824,
+        "approximate_95_ci": [
+          0.49274955943574145,
+          0.5315575692139064
+        ],
+        "decisions": 5734,
+        "effective_sample_size": 2548.9252384127535,
+        "effective_fraction": 0.4445282941075608,
+        "clipped_fraction": 0.0,
+        "behavior_probability_median": 0.019887706743671966,
+        "behavior_below_uniform_fraction": 0.27554935472619463,
+        "usable": true,
+        "temperature": 0.1,
+        "clip": 20.0,
+        "uniform_target_estimate": 0.48246627242067386,
+        "target_sensitivity": 0.029687291904150093
+      }
+    },
     "outcome_recommender": {
       "phase": 3,
       "decisions": 5734,

@@ -75,6 +75,31 @@ Outcome 模型的状态项对所有候选加同一个数：它改变预测胜率
 Outcome 模型的推荐实质上是一张静态梯度榜。Policy 是真正随阵容变化的，但它的
 排序在配对指标上只有 0.503～0.505，等于随机 —— 会看阵容并不等于排得准。
 
+### 出厂配置：候选池
+
+只按预测胜率排序，会得到一张几乎不随阵容变化的列表：第 2 轮有 81%～89% 的局面
+拿到**同一组**五个英雄，整个留出集里只有 5～7 个英雄进过 top-5，而这些推荐玩家
+实际只有 9%～12% 的时候会选。一个没人会采纳的推荐，排序再准也没有价值。
+
+出厂配置因此先用 Policy 取出玩家最可能选的 `DEFAULT_CANDIDATE_POOL = 20` 个英雄，
+在池内按预测胜率排序，池外英雄保持原有次序排在后面（不丢弃，列表长度不受影响）。
+`ranking_benchmark.json` 里的 `shipped_recommender` 就是这个配置。
+
+| 模型 | 同状态配对 | 95% 区间 | 命中差 | H@5 | top-5 英雄种类 | 第2轮最常见组合占比 |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| 传奇及以上（默认） | 0.5216 | [0.5087, 0.5346] | +3.07 点 | 0.185 | 51 | 10.5% |
+| 统帅及以下 | 0.5208 | [0.5092, 0.5324] | +3.83 点 | 0.175 | 51 | 5.9% |
+| 全段位 | 0.5198 | [0.5113, 0.5283] | +2.48 点 | 0.178 | 44 | 8.3% |
+
+三个分段的区间下界都高于 0.5，排序仍显著优于随机。代价是同状态配对从未筛选的
+0.5242 / 0.5466 / 0.5386 降到上表数值 —— 约 0.3～2.6 个点。命中差在传奇及以上和
+统帅及以下都**变好**（2.20→3.07、3.55→3.83）。
+
+**不要把池大小「凑整」到 40。**池大小对排序质量的影响不是单调的：40 在传奇及以上
+（App 的默认模型）拿到 0.5113，区间 [0.4984, 0.5243] **包含随机**，而 20 在该分段
+的每一项指标上都优于 40。改动前用
+`python -m d2draft.ranking_benchmark --candidate-pool N` 重跑扫描。
+
 ### 胜败方 top-5 命中差
 
 `outcome_split_hit` 衡量界面上真正显示的东西：玩家实际选的英雄有没有落在推荐
@@ -328,6 +353,37 @@ caused by heroes being unavailable excluded):
 The outcome model's recommendation is a static tier list in practice. Policy does
 respond to the draft, but its ranking scores 0.503–0.505 on the pairwise test,
 which is chance: reacting to the lineup is not the same as ranking well.
+
+### The shipped configuration: a candidate pool
+
+Ranking purely by predicted win probability produces a list that barely moves: at
+round 2, between 81% and 89% of drafts receive the **same** five heroes, only 5–7
+heroes ever reach the top five across the whole holdout, and players actually take
+those suggestions 9–12% of the time. A recommendation nobody acts on has no value
+regardless of how well it is ordered.
+
+The shipped configuration therefore uses Policy to take the
+`DEFAULT_CANDIDATE_POOL = 20` heroes players are most likely to pick, ranks those by
+predicted win probability, and leaves the rest in their original order behind them —
+nothing is dropped, so a long list still fills. `shipped_recommender` in
+`ranking_benchmark.json` measures exactly this.
+
+| Model | Same-state pairwise | 95% interval | Hit gap | H@5 | Distinct top-5 | Round-2 dominance |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| Legend and above (default) | 0.5216 | [0.5087, 0.5346] | +3.07 pts | 0.185 | 51 | 10.5% |
+| Archon and below | 0.5208 | [0.5092, 0.5324] | +3.83 pts | 0.175 | 51 | 5.9% |
+| All ranks | 0.5198 | [0.5113, 0.5283] | +2.48 pts | 0.178 | 44 | 8.3% |
+
+Every interval's lower bound clears 0.5, so the ranking still beats chance. The cost
+is same-state pairwise falling from the unfiltered 0.5242, 0.5466, and 0.5386 to the
+values above — between 0.3 and 2.6 points. The hit gap **improves** for legend and
+above and for archon and below (2.20 → 3.07 and 3.55 → 3.83).
+
+**Do not round the pool up to 40.** Pool size does not affect ranking quality
+monotonically: 40 scores 0.5113 on legend-and-above — the app's default model — with
+an interval of [0.4984, 0.5243] that includes chance, while 20 beats 40 there on every
+metric. Re-run the sweep with
+`python -m d2draft.ranking_benchmark --candidate-pool N` before changing it.
 
 ### Winner/loser top-5 hit gap
 

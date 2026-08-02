@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-02T05:12:31.677504+00:00",
+  "generated_at_utc": "2026-08-02T06:08:52.221457+00:00",
   "model_id": "mvp-7.41-archon_below-20260802T033127",
   "rank_bracket": "统帅及以下",
   "patch": "7.41",
@@ -8,6 +8,77 @@
   "test_decisions": 35530,
   "phase": 3,
   "methods": {
+    "shipped_recommender": {
+      "phase": 3,
+      "decisions": 7106,
+      "state_responsiveness": {
+        "decisions": 4000,
+        "top_k": 5,
+        "distinct_top_1": 17,
+        "distinct_top_5": 51,
+        "heroes": 127,
+        "top_5_change_rate": 1.0,
+        "mean_spearman_vs_static": 0.3797720197084739,
+        "median_rank_swing": 68.0,
+        "max_rank_swing": 108.0
+      },
+      "same_state_pairwise": {
+        "comparisons": 7106,
+        "matches": 3553,
+        "accuracy": 0.5208274697438784,
+        "approximate_95_ci": [
+          0.5092120109816283,
+          0.5324429285061285
+        ],
+        "points_above_chance": 2.082746974387839
+      },
+      "outcome_split_hit": {
+        "top_k": 5,
+        "matches": 3553,
+        "winning_side_hit_rate": 0.17478187447227694,
+        "losing_side_hit_rate": 0.13650436251055445,
+        "difference_points": 3.827751196172249,
+        "approximate_95_ci_points": [
+          2.1390838744786573,
+          5.51641851786584
+        ]
+      },
+      "stratified_association": {
+        "top_k": 5,
+        "strata": 10,
+        "unstratified": {
+          "followed_decisions": 1106,
+          "followed_win_rate": 0.5614828209764918,
+          "other_decisions": 6000,
+          "other_win_rate": 0.4886666666666667,
+          "observed_difference_points": 7.281615430982513,
+          "approximate_95_ci_points": [
+            4.095381192028057,
+            10.467849669936967
+          ]
+        },
+        "stratified_difference_points": 7.202292830599603,
+        "followed_decisions": 1106
+      },
+      "off_policy_value": {
+        "estimate": 0.5103538984965401,
+        "approximate_95_ci": [
+          0.4926974647172977,
+          0.5280103322757825
+        ],
+        "decisions": 7106,
+        "effective_sample_size": 3077.072324945801,
+        "effective_fraction": 0.4330245320779343,
+        "clipped_fraction": 0.0,
+        "behavior_probability_median": 0.017895523066575207,
+        "behavior_below_uniform_fraction": 0.27680833098789753,
+        "usable": true,
+        "temperature": 0.1,
+        "clip": 20.0,
+        "uniform_target_estimate": 0.4631472623502689,
+        "target_sensitivity": 0.04720663614627124
+      }
+    },
     "outcome_recommender": {
       "phase": 3,
       "decisions": 7106,

@@ -43,6 +43,7 @@ from typing import Any
 import numpy as np
 
 from .outcome import OutcomeEmbeddingModel, OutcomeExamples
+from .recommender import DEFAULT_CANDIDATE_POOL
 
 
 RADIANT, DIRE = 0, 1
@@ -544,6 +545,24 @@ def evaluate_method(
     return report
 
 
+def _with_candidate_pool(
+    outcome: np.ndarray, behavior: np.ndarray, legal: np.ndarray, pool: int
+) -> np.ndarray:
+    """Reproduce what the app ships: rank the likely picks ahead of the rest.
+
+    Mirrors ``HybridRecommender._pool_penalty`` so the benchmark scores the
+    configuration users actually see, not the raw outcome ordering.
+    """
+
+    if pool <= 0:
+        return outcome
+    ranked = np.argsort(-np.where(legal, behavior, -np.inf), axis=1)
+    penalty = np.zeros_like(outcome)
+    rows = np.arange(len(outcome))[:, None]
+    penalty[rows, ranked[:, pool:]] = 1e3
+    return outcome - penalty
+
+
 def _batched_scores(
     model: OutcomeEmbeddingModel, examples: OutcomeExamples, heroes: int
 ) -> np.ndarray:
@@ -599,6 +618,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     state_value = np.nanmean(masked, axis=1)
 
     methods = {
+        "shipped_recommender": _with_candidate_pool(
+            outcome_scores, behavior, legal, args.candidate_pool
+        ),
         "outcome_recommender": outcome_scores,
         "static_hero_strength": static,
         "pick_prediction_policy": behavior,
@@ -658,6 +680,7 @@ def main() -> None:
     parser.add_argument("--phase", type=int, default=3, choices=(1, 2, 3))
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--temperature", type=float, default=0.1)
+    parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     print(json.dumps(run(args), ensure_ascii=True, indent=2))

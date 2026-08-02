@@ -12,6 +12,22 @@ from .outcome import OutcomeEmbeddingModel
 from .state import DraftState
 
 
+# How many of the heroes players are most likely to pick get ranked ahead of the
+# rest. Chosen by sweeping the held-out set for every bracket. At 20 the round-2
+# list stops being dominated by a single fixed set of five (81-89% of drafts down
+# to 6-11%), the number of heroes that ever reach the top five goes from 5-7 to
+# 44-51, and top-5 hit rate roughly doubles, while same-state pairwise accuracy
+# stays above chance in all three brackets.
+#
+# Do not "round up" to 40. That value scores 0.5113 on legend-and-above with a 95%
+# interval of [0.4984, 0.5243], which includes chance, and legend-and-above is the
+# app's default model. The dip is local: 20 beats 40 there on every metric.
+# `python -m d2draft.ranking_benchmark --candidate-pool N` re-runs the sweep.
+# None disables the pool and restores the near-fixed tier list.
+DEFAULT_CANDIDATE_POOL = 20
+_POOL_DEMOTION = 100.0
+
+
 def _softmax(values: np.ndarray) -> np.ndarray:
     shifted = values - np.max(values)
     exp = np.exp(shifted)
@@ -192,8 +208,35 @@ class HybridRecommender:
         hidden = np.maximum(0.0, x @ self.policy_w1 + self.policy_b1)
         return hidden @ self.policy_w2 + self.policy_b2, "neural"
 
+    def _pool_penalty(
+        self, policy: np.ndarray, legal: np.ndarray, candidate_pool: int | None
+    ) -> np.ndarray:
+        """Push heroes players almost never pick below the ones they do.
+
+        Ranking every legal hero by predicted win probability produces a list that
+        barely moves between drafts, because the outcome model's ordering is close
+        to a fixed tier list and its top entries are picked about 11% of the time.
+        Ordering the heroes players actually consider first makes the list respond
+        to the draft. Nothing is dropped: heroes outside the pool keep their order
+        and follow the pool, so a long list still fills.
+        """
+
+        penalty = np.zeros(len(self.hero_ids), dtype=np.float64)
+        if candidate_pool is None or candidate_pool <= 0:
+            return penalty
+        available = int(legal.sum())
+        if candidate_pool >= available:
+            return penalty
+        ranked = np.argsort(-np.where(legal, policy, -np.inf))
+        penalty[ranked[candidate_pool:]] = _POOL_DEMOTION
+        return penalty
+
     def score_arrays(
-        self, state: DraftState, *, value_blend: float = 0.25
+        self,
+        state: DraftState,
+        *,
+        value_blend: float = 0.25,
+        candidate_pool: int | None = DEFAULT_CANDIDATE_POOL,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, str]:
         policy, policy_kind = self._policy_logits(state)
         legal = np.ones(len(self.hero_ids), dtype=bool)
@@ -212,6 +255,7 @@ class HybridRecommender:
         else:
             value_delta = self.value_weight * self.hero_strength
             combined = _zscore_legal(policy, legal) + value_blend * _zscore_legal(value_delta, legal)
+        combined = combined - self._pool_penalty(policy, legal, candidate_pool)
         combined[~legal] = -1e9
         legal_policy = policy.copy()
         legal_policy[~legal] = -1e9
@@ -220,10 +264,15 @@ class HybridRecommender:
         return combined, probabilities, value_delta, legal, policy_kind
 
     def recommend(
-        self, state: DraftState, *, top_k: int = 10, value_blend: float = 0.25
+        self,
+        state: DraftState,
+        *,
+        top_k: int = 10,
+        value_blend: float = 0.25,
+        candidate_pool: int | None = DEFAULT_CANDIDATE_POOL,
     ) -> tuple[list[Recommendation], str]:
         combined, probability, value_delta, legal, policy_kind = self.score_arrays(
-            state, value_blend=value_blend
+            state, value_blend=value_blend, candidate_pool=candidate_pool
         )
         order = np.argsort(-combined)
         result: list[Recommendation] = []
