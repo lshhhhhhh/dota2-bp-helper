@@ -45,7 +45,9 @@
 
 桌面端通过每个模型目录内的 `model_manifest.json` 发现并加载模型。Manifest 声明模型 ID、Dota 版本、适用分段、英雄表、输入输出契约和文件 SHA-256。应用只允许切换随项目发布且通过兼容性校验的模型包，不直接载入任意 `.npz` 文件。
 
-Outcome 模型直接学习 `P(获胜 | 当前公开阵容, 候选英雄, BP轮次)`。胜方五个选择的标签为 1，败方五个选择的标签为 0，因此“选了但输了”会直接反馈到模型中。候选、公开队友和公开敌人的嵌入用于学习英雄强度、配合和克制；最终排序只看预测胜率，不再优化“像不像玩家常见选择”。当前模型没有使用位置、分路、玩家熟练度，或“先手”“幻象处理”等专家标签。
+Outcome 模型直接学习 `P(获胜 | 当前公开阵容, 候选英雄, BP轮次)`。胜方五个选择的标签为 1，败方五个选择的标签为 0，因此“选了但输了”会直接反馈到模型中。最终排序只看预测胜率，不再优化“像不像玩家常见选择”。当前模型没有使用位置、分路、玩家熟练度，或“先手”“幻象处理”等专家标签。
+
+模型结构里有候选、公开队友和公开敌人的嵌入，本意是学习配合与克制。**实测它们没有起到作用**：`ranking_benchmark.json` 显示排序与阵容几乎无关（与固定排序的 Spearman 0.999，4000 个局面中 top-5 只出现过 5～7 个英雄），相对一张静态英雄强度榜的排序增量是 0.03～0.16 个百分点，等于零。因此当前版本应当理解为**阵容强度评估 + 一张接近静态的英雄梯度榜**，不要按“会算配合克制”来使用。原因见 BENCHMARK.md：人类对局数据本身是自我平衡的，玩家不会真的凑出极端阵容，配合与克制的信号在观察数据里很难显现。
 
 ### Benchmark 应该怎样理解
 
@@ -183,7 +185,9 @@ The system has four layers:
 
 The app discovers each model through its `model_manifest.json`. The manifest declares the model ID, Dota patch, skill bracket, hero catalog, input/output contract, and SHA-256 file hash. Only bundled models that pass compatibility checks can be selected; arbitrary `.npz` files cannot be loaded directly.
 
-The Outcome model directly learns `P(win | public lineup, candidate hero, draft round)`. All five picks on the winning side receive label 1, while all five picks on the losing side receive label 0, so a pick that loses feeds back directly into training. Embeddings for the candidate, revealed allies, and revealed enemies learn hero strength, synergy, and counter relationships. Final ranking uses predicted win probability only; it no longer optimizes similarity to common player choices. Roles, lanes, player proficiency, and expert tags are still not included.
+The Outcome model directly learns `P(win | public lineup, candidate hero, draft round)`. All five picks on the winning side receive label 1, while all five picks on the losing side receive label 0, so a pick that loses feeds back directly into training. Final ranking uses predicted win probability only; it no longer optimizes similarity to common player choices. Roles, lanes, player proficiency, and expert tags are still not included.
+
+The architecture contains candidate, revealed-ally, and revealed-enemy embeddings intended to learn synergy and counter relationships. **Measurement shows they do not work.** `ranking_benchmark.json` finds the ranking almost independent of the draft (Spearman 0.999 against a fixed order; only 5–7 distinct heroes ever reach the top 5 across 4,000 states), and its ranking gain over a static hero-strength tier list is 0.03–0.16 points, which is zero. Treat this version as **a lineup-strength evaluator plus a nearly static hero tier list**, not as a system that reasons about synergy. BENCHMARK.md explains why: human match data is self-balancing, players never actually build extreme lineups, so synergy and counter effects barely surface in observational data.
 
 ### How to read the benchmark
 

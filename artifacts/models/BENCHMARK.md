@@ -45,6 +45,41 @@ AUC 为 0.5 等于随机。三套模型都从公开 4v4 阵容中获得了英雄
 
 完整机器可读结果位于各模型目录的 `outcome_benchmark.json`。
 
+## 推荐排序质量
+
+上面的指标衡量的都是「这个阵容会不会赢」。它们无法衡量「下一手该选谁」，因为
+Outcome 模型的状态项对所有候选加同一个数：它改变预测胜率，但不改变排序。一个
+排序完全固定的模型可以在上面每一项上拿到相同的分数。
+
+`ranking_benchmark.json` 专门衡量排序。**同状态配对**取同一场比赛双方的第三轮
+选择，在同一个状态下打分：状态项精确抵消，只剩候选排序；获胜方的英雄和落败方的
+英雄来自同一场比赛，比赛层面的混杂也一并抵消。随机等于 0.5。
+
+| 模型 | Outcome 模型 | 静态英雄强度榜 | Policy | 随机 | 模型−静态榜 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 传奇及以上 | 0.524 | 0.524 | 0.503 | 0.505 | +0.03 点 |
+| 统帅及以下 | 0.547 | 0.546 | 0.505 | 0.502 | +0.06 点 |
+| 全段位 | 0.539 | 0.537 | 0.504 | 0.501 | +0.16 点 |
+
+排序确实优于随机，但**全部优势都来自英雄的整体强度**。相对一张固定梯度榜的增量
+是 0.03～0.16 个百分点，远在置信区间之内，等于零。
+
+排序对阵容的响应程度（4000 个第三轮局面，已排除英雄被选走造成的变化）：
+
+| 模型 | top-5 出现过的英雄数 | top-5 变化率 | 与固定排序的 Spearman |
+| --- | ---: | ---: | ---: |
+| Outcome 模型 | 5～7（共 127） | 0.000～0.011 | 0.999 |
+| 静态英雄强度榜 | 5 | 0.000 | 1.000 |
+| Policy | 71～92 | 0.998～1.000 | 0.74～0.80 |
+
+Outcome 模型的推荐实质上是一张静态梯度榜。Policy 是真正随阵容变化的，但它的
+排序在配对指标上只有 0.503～0.505，等于随机 —— 会看阵容并不等于排得准。
+
+`off_policy_value` 使用 Policy 作为倾向性模型做自归一化 IPS。当前三套模型上它
+都被标记为 `usable: false`：有效样本量只有 19%～21%，且把目标策略换成均匀分布
+后估计值只变化 0.006～0.007，说明数字由 `1/μ` 分母主导，与被评估的模型无关。
+在 Policy 的 Hit@1 提高之前，不要引用这个估计值。
+
 ---
 
 # Dota 2 BP Helper Outcome Benchmark
@@ -99,3 +134,45 @@ power requires roughly 8,700 completed matches.
 
 Full machine-readable results are stored in each model directory's
 `outcome_benchmark.json`.
+
+## Recommendation ranking quality
+
+Everything above measures "will this lineup win". None of it measures "which hero
+should I pick next", because the outcome model's state term adds the same amount
+to every candidate: it moves the predicted win probability without moving the
+ranking. A model with a completely fixed ranking scores identically on all of it.
+
+`ranking_benchmark.json` measures the ranking directly. **Same-state pairwise**
+takes both round-3 picks of one match and scores them at the same state: the state
+term cancels exactly, leaving only the candidate ranking, and because the winning
+and losing hero come from the same match, match-level confounders cancel too.
+Chance is 0.5.
+
+| Model | Outcome model | Static hero strength | Policy | Random | Model − static |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Legend and above | 0.524 | 0.524 | 0.503 | 0.505 | +0.03 pts |
+| Archon and below | 0.547 | 0.546 | 0.505 | 0.502 | +0.06 pts |
+| All ranks | 0.539 | 0.537 | 0.504 | 0.501 | +0.16 pts |
+
+The ranking does beat chance, but **all of that comes from per-hero global
+strength**. The gain over a fixed tier list is 0.03–0.16 points, well inside the
+confidence intervals, which is zero.
+
+How much the ranking responds to the draft (4,000 round-3 states, with variation
+caused by heroes being unavailable excluded):
+
+| Model | Distinct heroes seen in top 5 | Top-5 change rate | Spearman vs fixed order |
+| --- | ---: | ---: | ---: |
+| Outcome model | 5–7 of 127 | 0.000–0.011 | 0.999 |
+| Static hero strength | 5 | 0.000 | 1.000 |
+| Policy | 71–92 | 0.998–1.000 | 0.74–0.80 |
+
+The outcome model's recommendation is a static tier list in practice. Policy does
+respond to the draft, but its ranking scores 0.503–0.505 on the pairwise test,
+which is chance: reacting to the lineup is not the same as ranking well.
+
+`off_policy_value` runs self-normalised IPS with Policy as the propensity model.
+It is currently marked `usable: false` for all three models: effective sample size
+is only 19–21%, and swapping the target for a uniform policy moves the estimate by
+0.006–0.007, showing the number is driven by the `1/mu` denominator rather than by
+the model under evaluation. Do not quote it until Policy's Hit@1 improves.

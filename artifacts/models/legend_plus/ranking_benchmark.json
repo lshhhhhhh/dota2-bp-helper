@@ -1,0 +1,253 @@
+{
+  "generated_at_utc": "2026-08-02T05:03:45.227392+00:00",
+  "model_id": "mvp-7.41-legend_plus-20260802T033124",
+  "rank_bracket": "传奇及以上",
+  "patch": "7.41",
+  "split": "oldest 80% training, next 10% untouched, newest 10% benchmark",
+  "test_matches": 2867,
+  "test_decisions": 28670,
+  "phase": 3,
+  "methods": {
+    "outcome_recommender": {
+      "phase": 3,
+      "decisions": 5734,
+      "state_responsiveness": {
+        "decisions": 4000,
+        "top_k": 5,
+        "distinct_top_1": 2,
+        "distinct_top_5": 6,
+        "heroes": 127,
+        "top_5_change_rate": 0.01025,
+        "mean_spearman_vs_static": 0.9993940098308025,
+        "median_rank_swing": 4.0,
+        "max_rank_swing": 21.0
+      },
+      "same_state_pairwise": {
+        "comparisons": 5734,
+        "matches": 2867,
+        "accuracy": 0.5242413672828741,
+        "approximate_95_ci": [
+          0.5113147107500465,
+          0.5371680238157016
+        ],
+        "points_above_chance": 2.424136728287407
+      },
+      "stratified_association": {
+        "top_k": 5,
+        "strata": 10,
+        "unstratified": {
+          "followed_decisions": 471,
+          "followed_win_rate": 0.5668789808917197,
+          "other_decisions": 5263,
+          "other_win_rate": 0.4940148204446133,
+          "observed_difference_points": 7.286416044710641,
+          "approximate_95_ci_points": [
+            2.611975088359674,
+            11.960857001061608
+          ]
+        },
+        "stratified_difference_points": 7.104768511880381,
+        "followed_decisions": 471
+      },
+      "off_policy_value": {
+        "estimate": 0.48865868133288654,
+        "approximate_95_ci": [
+          0.45867572491381975,
+          0.5186416377519534
+        ],
+        "decisions": 5734,
+        "effective_sample_size": 1067.7849473380172,
+        "effective_fraction": 0.186219907104642,
+        "clipped_fraction": 0.007847924659923265,
+        "behavior_probability_median": 0.019887706743671966,
+        "behavior_below_uniform_fraction": 0.27554935472619463,
+        "usable": false,
+        "temperature": 0.1,
+        "clip": 20.0,
+        "uniform_target_estimate": 0.48246627242067386,
+        "target_sensitivity": 0.006192408912212677
+      }
+    },
+    "static_hero_strength": {
+      "phase": 3,
+      "decisions": 5734,
+      "state_responsiveness": {
+        "decisions": 4000,
+        "top_k": 5,
+        "distinct_top_1": 1,
+        "distinct_top_5": 5,
+        "heroes": 127,
+        "top_5_change_rate": 0.0,
+        "mean_spearman_vs_static": 1.0,
+        "median_rank_swing": 0.0,
+        "max_rank_swing": 0.0
+      },
+      "same_state_pairwise": {
+        "comparisons": 5734,
+        "matches": 2867,
+        "accuracy": 0.5238925706313219,
+        "approximate_95_ci": [
+          0.5109654790329992,
+          0.5368196622296446
+        ],
+        "points_above_chance": 2.3892570631321886
+      },
+      "stratified_association": {
+        "top_k": 5,
+        "strata": 10,
+        "unstratified": {
+          "followed_decisions": 252,
+          "followed_win_rate": 0.5515873015873016,
+          "other_decisions": 5482,
+          "other_win_rate": 0.4976286026997446,
+          "observed_difference_points": 5.3958698887556995,
+          "approximate_95_ci_points": [
+            -0.8856342569837444,
+            11.677374034495145
+          ]
+        },
+        "stratified_difference_points": 5.560920183758432,
+        "followed_decisions": 252
+      },
+      "off_policy_value": {
+        "estimate": 0.5043570641524582,
+        "approximate_95_ci": [
+          0.4722379450274877,
+          0.5364761832774286
+        ],
+        "decisions": 5734,
+        "effective_sample_size": 930.2386650503742,
+        "effective_fraction": 0.16223206575695398,
+        "clipped_fraction": 0.007847924659923265,
+        "behavior_probability_median": 0.019887706743671966,
+        "behavior_below_uniform_fraction": 0.27554935472619463,
+        "usable": false,
+        "temperature": 0.1,
+        "clip": 20.0,
+        "uniform_target_estimate": 0.48246627242067386,
+        "target_sensitivity": 0.02189079173178432
+      }
+    },
+    "pick_prediction_policy": {
+      "phase": 3,
+      "decisions": 5734,
+      "state_responsiveness": {
+        "decisions": 4000,
+        "top_k": 5,
+        "distinct_top_1": 66,
+        "distinct_top_5": 92,
+        "heroes": 127,
+        "top_5_change_rate": 0.99975,
+        "mean_spearman_vs_static": 0.7364641670767716,
+        "median_rank_swing": 121.0,
+        "max_rank_swing": 126.0
+      },
+      "same_state_pairwise": {
+        "comparisons": 5734,
+        "matches": 2867,
+        "accuracy": 0.5031391698639693,
+        "approximate_95_ci": [
+          0.49019754902478907,
+          0.5160807907031496
+        ],
+        "points_above_chance": 0.3139169863969338
+      },
+      "stratified_association": {
+        "top_k": 5,
+        "strata": 10,
+        "unstratified": {
+          "followed_decisions": 1409,
+          "followed_win_rate": 0.5266146202980837,
+          "other_decisions": 4325,
+          "other_win_rate": 0.4913294797687861,
+          "observed_difference_points": 3.5285140529297596,
+          "approximate_95_ci_points": [
+            0.5257188005574062,
+            6.531309305302113
+          ]
+        },
+        "stratified_difference_points": 3.281340766169306,
+        "followed_decisions": 1409
+      },
+      "off_policy_value": {
+        "estimate": 0.5073526429502797,
+        "approximate_95_ci": [
+          0.46392066640235696,
+          0.5507846194982025
+        ],
+        "decisions": 5734,
+        "effective_sample_size": 509.3310894353723,
+        "effective_fraction": 0.088826489263232,
+        "clipped_fraction": 0.0,
+        "behavior_probability_median": 0.019887706743671966,
+        "behavior_below_uniform_fraction": 0.27554935472619463,
+        "usable": false,
+        "temperature": 0.1,
+        "clip": 20.0,
+        "uniform_target_estimate": 0.48246627242067386,
+        "target_sensitivity": 0.02488637052960585
+      }
+    },
+    "random": {
+      "phase": 3,
+      "decisions": 5734,
+      "state_responsiveness": {
+        "decisions": 4000,
+        "top_k": 5,
+        "distinct_top_1": 127,
+        "distinct_top_5": 127,
+        "heroes": 127,
+        "top_5_change_rate": 1.0,
+        "mean_spearman_vs_static": 0.01513967150590551,
+        "median_rank_swing": 126.0,
+        "max_rank_swing": 126.0
+      },
+      "same_state_pairwise": {
+        "comparisons": 5734,
+        "matches": 2867,
+        "accuracy": 0.504708754795954,
+        "approximate_95_ci": [
+          0.4917674528026339,
+          0.5176500567892741
+        ],
+        "points_above_chance": 0.47087547959540066
+      },
+      "stratified_association": {
+        "top_k": 5,
+        "strata": 10,
+        "unstratified": {
+          "followed_decisions": 237,
+          "followed_win_rate": 0.459915611814346,
+          "other_decisions": 5497,
+          "other_win_rate": 0.5017282153902128,
+          "observed_difference_points": -4.181260357586686,
+          "approximate_95_ci_points": [
+            -10.662763015450153,
+            2.3002423002767807
+          ]
+        },
+        "stratified_difference_points": -3.8457076768318754,
+        "followed_decisions": 237
+      },
+      "off_policy_value": {
+        "estimate": 0.4876029077099055,
+        "approximate_95_ci": [
+          0.3938514625518862,
+          0.5813543528679248
+        ],
+        "decisions": 5734,
+        "effective_sample_size": 109.34074658472434,
+        "effective_fraction": 0.01906884314348175,
+        "clipped_fraction": 0.011335891175444715,
+        "behavior_probability_median": 0.019887706743671966,
+        "behavior_below_uniform_fraction": 0.27554935472619463,
+        "usable": false,
+        "temperature": 0.1,
+        "clip": 20.0,
+        "uniform_target_estimate": 0.48246627242067386,
+        "target_sensitivity": 0.005136635289231639
+      }
+    }
+  },
+  "interpretation": "state_responsiveness and same_state_pairwise are assumption-free diagnostics of the ranking itself. stratified_association removes the state-strength path but not player self-selection. off_policy_value assumes no unobserved confounding, which player skill violates, so compare policies to each other rather than reading it as a forecast."
+}
