@@ -132,6 +132,8 @@ class DraftDesktopApp:
         self.slot_buttons: dict[str, list[tk.Button]] = {"radiant": [], "dire": []}
         self.count_labels: dict[str, ttk.Label] = {}
         self.suggestion_ids: dict[str, dict[str, int]] = {"radiant": {}, "dire": {}}
+        self._suggestion_windows: dict[str, tk.Toplevel] = {}
+        self._suggestion_lists: dict[str, tk.Listbox] = {}
         self.photo_cache: dict[int | str, ImageTk.PhotoImage] = {}
         self.result_titles = {
             "radiant": tk.StringVar(value=self._t("radiant_recommendation")),
@@ -222,6 +224,8 @@ class DraftDesktopApp:
         self._update_status_var.set("")
         for child in self.root.winfo_children():
             child.destroy()
+        self._suggestion_windows = {}
+        self._suggestion_lists = {}
         self.slot_buttons = {"radiant": [], "dire": []}
         self.count_labels = {}
         self.trees = {}
@@ -1085,8 +1089,16 @@ class DraftDesktopApp:
             ),
         )
         combo.bind("<<ComboboxSelected>>", lambda event, s=side: self.add_from_input(s))
-        combo.bind("<Return>", lambda event, s=side: self.add_from_input(s))
-        combo.bind("<Escape>", lambda event, s=side: self.input_vars[s].set(""))
+        combo.bind(
+            "<Return>", lambda event, s=side, c=combo: self._accept_suggestion(s, c)
+        )
+        combo.bind("<Down>", lambda event, s=side: self._move_suggestion(s, 1))
+        combo.bind("<Up>", lambda event, s=side: self._move_suggestion(s, -1))
+        combo.bind(
+            "<Escape>",
+            lambda event, s=side: (self._hide_suggestions(s), self.input_vars[s].set("")),
+        )
+        combo.bind("<FocusOut>", lambda event, s=side: self._hide_suggestions(s))
         ttk.Button(manual, text=self._t("add_hero"), command=lambda s=side: self.add_from_input(s)).pack(fill="x")
 
     def _build_result_panel(self, parent: ttk.Frame, side: str, column: int) -> None:
@@ -1198,9 +1210,79 @@ class DraftDesktopApp:
         suffix = f"  ({', '.join(aliases)})" if aliases else ""
         return f"{primary}{suffix}"
 
+    def _suggestion_listbox(self, side: str, combo: ttk.Combobox) -> tk.Listbox:
+        """A dropdown that never takes focus, so typing is never interrupted.
+
+        The combobox's own dropdown cannot be used for type-ahead: posting it
+        grabs the keyboard, so the character after the first goes to the list
+        instead of the entry.
+        """
+
+        window = self._suggestion_windows.get(side)
+        if window is not None and window.winfo_exists():
+            return self._suggestion_lists[side]
+        window = tk.Toplevel(self.root)
+        window.withdraw()
+        window.overrideredirect(True)
+        window.attributes("-topmost", True)
+        listbox = tk.Listbox(
+            window,
+            activestyle="none",
+            bg=CARD,
+            fg=TEXT,
+            selectbackground=ACCENT,
+            selectforeground=BG,
+            highlightthickness=0,
+            borderwidth=0,
+            exportselection=False,
+            font=("Microsoft YaHei UI", 10),
+        )
+        listbox.pack(fill="both", expand=True)
+        listbox.bind(
+            "<ButtonRelease-1>",
+            lambda _event, s=side, c=combo: self._accept_suggestion(s, c),
+        )
+        self._suggestion_windows[side] = window
+        self._suggestion_lists[side] = listbox
+        return listbox
+
+    def _hide_suggestions(self, side: str) -> None:
+        window = self._suggestion_windows.get(side)
+        if window is not None and window.winfo_exists():
+            window.withdraw()
+
+    def _move_suggestion(self, side: str, delta: int) -> str:
+        window = self._suggestion_windows.get(side)
+        if window is None or not window.winfo_exists() or not window.winfo_viewable():
+            return ""
+        listbox = self._suggestion_lists[side]
+        total = listbox.size()
+        if not total:
+            return ""
+        current = listbox.curselection()
+        index = (current[0] + delta) % total if current else (0 if delta > 0 else total - 1)
+        listbox.selection_clear(0, "end")
+        listbox.selection_set(index)
+        listbox.see(index)
+        return "break"
+
+    def _accept_suggestion(self, side: str, combo: ttk.Combobox) -> str:
+        window = self._suggestion_windows.get(side)
+        if window is not None and window.winfo_exists() and window.winfo_viewable():
+            listbox = self._suggestion_lists[side]
+            selected = listbox.curselection()
+            if selected:
+                self.input_vars[side].set(listbox.get(selected[0]))
+        self._hide_suggestions(side)
+        combo.focus_set()
+        self.add_from_input(side)
+        return "break"
+
     def _update_suggestions(
         self, side: str, combo: ttk.Combobox, keysym: str = ""
     ) -> None:
+        if keysym in {"Up", "Down", "Return", "Escape", "Tab"}:
+            return
         query = self.input_vars[side].get().strip()
         heroes = self.catalog.search(query, limit=12) if query else []
         mapping = {
@@ -1208,18 +1290,24 @@ class DraftDesktopApp:
         }
         self.suggestion_ids[side] = mapping
         combo.configure(values=tuple(mapping))
-        if query and mapping and keysym not in {
-            "Up",
-            "Down",
-            "Return",
-            "Escape",
-            "Tab",
-        }:
-            # Post the dropdown without changing the text or preselecting a hero.
-            try:
-                combo.tk.call("ttk::combobox::Post", combo._w)
-            except tk.TclError:
-                combo.event_generate("<Down>")
+        if not query or not mapping:
+            self._hide_suggestions(side)
+            return
+
+        listbox = self._suggestion_listbox(side, combo)
+        listbox.delete(0, "end")
+        for label in mapping:
+            listbox.insert("end", label)
+        listbox.configure(height=min(len(mapping), 8))
+
+        window = self._suggestion_windows[side]
+        combo.update_idletasks()
+        window.geometry(
+            f"{combo.winfo_width()}x{listbox.winfo_reqheight()}"
+            f"+{combo.winfo_rootx()}+{combo.winfo_rooty() + combo.winfo_height()}"
+        )
+        window.deiconify()
+        window.lift()
 
     def add_from_input(self, side: str) -> None:
         value = self.input_vars[side].get().strip()
@@ -1328,6 +1416,15 @@ class DraftDesktopApp:
         return config
 
     def _window_overlaps_capture_area(self, monitors: list[MonitorInfo]) -> bool:
+        """Whether this window sits on any monitor about to be captured.
+
+        Deliberately coarse. Comparing against the default portrait boxes only
+        works when Dota is maximised; a windowed or letterboxed client puts the
+        real regions somewhere else, and because this window is always-on-top it
+        then covers exactly what recognition needs to read. Hiding is cheap, so
+        sharing a screen at all is reason enough.
+        """
+
         self.root.update_idletasks()
         window = (
             self.root.winfo_rootx(),
@@ -1335,18 +1432,7 @@ class DraftDesktopApp:
             self.root.winfo_rootx() + self.root.winfo_width(),
             self.root.winfo_rooty() + self.root.winfo_height(),
         )
-        for monitor in monitors:
-            config = CaptureConfig.default_for_screen(monitor.width, monitor.height)
-            for box in (config.allies_box, config.enemies_box):
-                global_box = (
-                    monitor.left + box[0],
-                    monitor.top + box[1],
-                    monitor.left + box[2],
-                    monitor.top + box[3],
-                )
-                if rectangles_intersect(window, global_box):
-                    return True
-        return False
+        return any(rectangles_intersect(window, monitor.rect) for monitor in monitors)
 
     def _capture_monitor(self, monitor: MonitorInfo) -> Image.Image:
         return ImageGrab.grab(bbox=monitor.rect, all_screens=True).convert("RGB")
@@ -1375,6 +1461,10 @@ class DraftDesktopApp:
         if not silent:
             self.status_var.set(self._t("scanning"))
             self.root.update_idletasks()
+        # An override-redirect popup is not withdrawn along with its parent, so it
+        # would otherwise end up in the screenshot.
+        for side in self.team_ids:
+            self._hide_suggestions(side)
         self._refresh_monitors(self.root.winfo_screenwidth(), self.root.winfo_screenheight())
         selected = self.monitor_choices.get(self.screen_var.get())
         targets = self.monitors if selected is None else [selected]
