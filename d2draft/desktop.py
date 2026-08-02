@@ -25,7 +25,7 @@ from .model_updates import (
 )
 from .recommender import HeroCatalog, HeroInfo, HybridRecommender, normalize_hero_name
 from .screen_capture import MonitorInfo, enumerate_monitors, rectangles_intersect
-from .state import DraftState
+from .state import MAXIMUM_TEAM_SIZE, DraftState, phase_for_next_pick
 from .vision import (
     CaptureConfig,
     PortraitMatcher,
@@ -321,6 +321,11 @@ class DraftDesktopApp:
         )
         language_combo.pack(side="left", padx=(0, 8))
         language_combo.bind("<<ComboboxSelected>>", self.change_language)
+        ttk.Button(
+            controls,
+            text=self._t("recommend_now"),
+            command=lambda: self.generate_recommendations(silent=False),
+        ).pack(side="left", padx=3)
         ttk.Button(controls, text=self._t("model"), command=self.show_model_info).pack(side="left", padx=3)
         ttk.Button(controls, text=self._t("recognize_screen"), command=self.capture_screen).pack(side="left", padx=3)
         ttk.Button(controls, text=self._t("open_screenshot"), command=self.open_screenshot).pack(side="left", padx=3)
@@ -1460,40 +1465,30 @@ class DraftDesktopApp:
             self._refresh_team(side)
         radiant_count = self._team_count("radiant")
         dire_count = self._team_count("dire")
-        inferred = self._infer_phase(radiant_count, dire_count, allow_complete=True)
+        phases = self._side_phases()
         confidence = [match.similarity for values in matches.values() for match in values if match.hero_id is not None]
         confidence_text = (
             self._t("confidence", confidence=sum(confidence) / len(confidence))
             if confidence
             else ""
         )
-        if inferred == 4:
+        if all(phase is None for phase in phases.values()):
             self.status_var.set(
                 self._t("recognized_complete", source=source, confidence=confidence_text)
             )
             self._clear_results(self._t("bp_finished"))
-        elif inferred in {1, 2, 3}:
-            self.status_var.set(
-                self._t(
-                    "recognized_phase",
-                    source=source,
-                    radiant=radiant_count,
-                    dire=dire_count,
-                    confidence=confidence_text,
-                    phase=inferred,
-                )
+            return
+        self.status_var.set(
+            self._t(
+                "recognized_phase",
+                source=source,
+                radiant=radiant_count,
+                dire=dire_count,
+                confidence=confidence_text,
+                phase=self._phase_label(phases),
             )
-            self.generate_recommendations(silent=True)
-        else:
-            self.status_var.set(
-                self._t(
-                    "recognized_invalid",
-                    source=source,
-                    radiant=radiant_count,
-                    dire=dire_count,
-                    confidence=confidence_text,
-                )
-            )
+        )
+        self.generate_recommendations(silent=True)
 
     def _team_count(self, side: str) -> int:
         return sum(hero_id is not None for hero_id in self.team_ids[side])
@@ -1501,25 +1496,28 @@ class DraftDesktopApp:
     def _heroes(self, side: str) -> tuple[int, ...]:
         return tuple(hero_id for hero_id in self.team_ids[side] if hero_id is not None)
 
-    @staticmethod
-    def _infer_phase(radiant: int, dire: int, *, allow_complete: bool = False) -> int | None:
-        if radiant == dire == 0:
-            return 1
-        if radiant == dire == 2:
-            return 2
-        if radiant == dire == 4:
-            return 3
-        if allow_complete and radiant == dire == 5:
-            return 4
-        return None
+    def _side_phases(self) -> dict[str, int | None]:
+        """The round each side's next pick belongs to, or None once it holds five.
 
-    def _selected_phase(self) -> int:
+        The two sides are inferred separately because they do not lock in
+        together: a 3v2 board is a side mid-way through round two facing one that
+        has not started it.
+        """
+
         if self.phase_var.get() != self._t("auto"):
-            return int(self.phase_var.get())
-        phase = self._infer_phase(self._team_count("radiant"), self._team_count("dire"))
-        if phase is None:
-            raise ValueError(self._t("auto_phase_invalid"))
-        return phase
+            forced = int(self.phase_var.get())
+            return {
+                side: (None if self._team_count(side) >= MAXIMUM_TEAM_SIZE else forced)
+                for side in ("radiant", "dire")
+            }
+        return {
+            side: phase_for_next_pick(self._team_count(side))
+            for side in ("radiant", "dire")
+        }
+
+    def _phase_label(self, phases: dict[str, int | None]) -> str:
+        active = sorted({phase for phase in phases.values() if phase is not None})
+        return "/".join(str(phase) for phase in active) if active else "-"
 
     def _blend_for(self, phase: int) -> float:
         defaults = {1: 0.0, 2: 0.1, 3: 0.1}
@@ -1529,7 +1527,7 @@ class DraftDesktopApp:
         return float(report.get("selected_value_blend", {}).get(f"phase_{phase}", defaults[phase]))
 
     def _maybe_recommend(self) -> None:
-        if self.phase_var.get() != self._t("auto") or self._infer_phase(self._team_count("radiant"), self._team_count("dire")):
+        if any(phase is not None for phase in self._side_phases().values()):
             self.generate_recommendations(silent=True)
 
     def _fill_tree(self, side: str, recommendations: list[object]) -> None:
@@ -1568,20 +1566,36 @@ class DraftDesktopApp:
             dire = self._heroes("dire")
             if len(set(radiant + dire)) != len(radiant + dire):
                 raise ValueError(self._t("duplicate_hero"))
-            phase = self._selected_phase()
-            blend = self._blend_for(phase)
-            radiant_recs, radiant_kind = self.recommender.recommend(
-                DraftState(phase=phase, allies=radiant, enemies=dire), top_k=10, value_blend=blend
-            )
-            dire_recs, dire_kind = self.recommender.recommend(
-                DraftState(phase=phase, allies=dire, enemies=radiant), top_k=10, value_blend=blend
-            )
-            self._fill_tree("radiant", radiant_recs)
-            self._fill_tree("dire", dire_recs)
-            self.result_titles["radiant"].set(self._t("radiant_recommendation"))
-            self.result_titles["dire"].set(self._t("dire_recommendation"))
-            radiant_kind = self._t(f"kind_{radiant_kind}")
-            dire_kind = self._t(f"kind_{dire_kind}")
+            phases = self._side_phases()
+            if all(phase is None for phase in phases.values()):
+                self._clear_results(self._t("bp_finished"))
+                self.status_var.set(self._t("bp_finished"))
+                return
+
+            kinds: dict[str, str] = {}
+            blend = 0.0
+            for side, allies, enemies in (
+                ("radiant", radiant, dire),
+                ("dire", dire, radiant),
+            ):
+                phase = phases[side]
+                if phase is None:
+                    self._fill_tree(side, [])
+                    team = self._t(side)
+                    self.result_titles[side].set(f"{team}: {self._t('bp_finished')}")
+                    continue
+                blend = self._blend_for(phase)
+                recommendations, kinds[side] = self.recommender.recommend(
+                    DraftState(phase=phase, allies=allies, enemies=enemies),
+                    top_k=10,
+                    value_blend=blend,
+                )
+                self._fill_tree(side, recommendations)
+                self.result_titles[side].set(self._t(f"{side}_recommendation"))
+
+            radiant_kind = self._t(f"kind_{kinds.get('radiant', 'neural')}")
+            dire_kind = self._t(f"kind_{kinds.get('dire', 'neural')}")
+            phase = self._phase_label(phases)
             if self.recommender.objective == "outcome":
                 self.status_var.set(
                     self._t(

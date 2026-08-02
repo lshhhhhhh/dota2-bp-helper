@@ -212,8 +212,11 @@ class OutcomeEmbeddingModel:
         phase: int,
     ) -> np.ndarray:
         heroes = len(self.parameters["candidate_bias"])
-        own = np.full((heroes, 4), -1, dtype=np.int16)
-        opposing = np.full((heroes, 4), -1, dtype=np.int16)
+        # Every term sums over the slot axis, so the width only has to fit the
+        # heroes actually revealed. A side may be one pick ahead of the other.
+        slots = max(4, len(allies), len(enemies))
+        own = np.full((heroes, slots), -1, dtype=np.int16)
+        opposing = np.full((heroes, slots), -1, dtype=np.int16)
         own[:, : len(allies)] = np.asarray(allies, dtype=np.int16)
         opposing[:, : len(enemies)] = np.asarray(enemies, dtype=np.int16)
         examples = OutcomeExamples(

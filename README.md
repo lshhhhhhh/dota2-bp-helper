@@ -22,7 +22,8 @@
 - 一键扫描所有显示器，也可以固定选择某一块屏幕；
 - 自动定位显示器内带黑边的 16:9 窗口化直播或录像画面；
 - 读取本地 BP 截图；
-- 自动按双方已公开英雄数推断第 1、2、3 轮；
+- 自动按各方已公开英雄数分别推断第 1、2、3 轮；
+- 双方英雄数不必相等 —— 3 打 2、4 打 5 都能直接出推荐，随时可点「立即推荐」强制刷新；
 - 天辉和夜魇各五个固定头像槽，显示识别置信度；
 - 暗色的“建议选择”头像不会被当作已经锁定的英雄；
 - 点击头像移除，或手动向任一方添加英雄；
@@ -162,7 +163,8 @@ The portable build does not require Python. The app does not read Dota 2 process
 - Scan all displays automatically or select one display explicitly;
 - Locate a letterboxed 16:9 Dota viewport inside a windowed stream or recording;
 - Open an existing draft screenshot;
-- Infer round 1, 2, or 3 from the number of revealed heroes on both sides;
+- Infer round 1, 2, or 3 for each side separately from how many heroes it has revealed;
+- The two sides need not be even — 3 against 2 or 4 against 5 all produce recommendations, and "Recommend Now" forces a refresh at any point;
 - Five fixed portrait slots per side with recognition confidence;
 - Ignore dim “suggested pick” portraits that have not been locked in;
 - Click a portrait to remove it, or add a hero manually to either side;

@@ -125,6 +125,54 @@ class RecommenderIntegrationTest(unittest.TestCase):
             {item.hero_id: item.predicted_win_probability for item in pooled},
         )
 
+    def test_recommends_when_one_side_is_a_pick_ahead(self) -> None:
+        allies = tuple(
+            self.catalog.resolve(name) for name in ("Axe", "Crystal Maiden", "Zeus")
+        )
+        enemies = tuple(self.catalog.resolve(name) for name in ("Spectre", "Anti-Mage"))
+        recommendations, _ = self.model.recommend(
+            DraftState.for_next_pick(allies, enemies), top_k=5
+        )
+        self.assertEqual(len(recommendations), 5)
+        self.assertFalse({item.hero_id for item in recommendations} & set(allies + enemies))
+        self.assertTrue(
+            all(0.0 < item.predicted_win_probability < 1.0 for item in recommendations)
+        )
+
+    def test_recommends_against_a_side_that_has_finished_drafting(self) -> None:
+        allies = tuple(
+            self.catalog.resolve(name)
+            for name in ("Axe", "Crystal Maiden", "Zeus", "Tidehunter")
+        )
+        enemies = tuple(
+            self.catalog.resolve(name)
+            for name in ("Spectre", "Anti-Mage", "Lich", "Riki", "Lion")
+        )
+        recommendations, _ = self.model.recommend(
+            DraftState.for_next_pick(allies, enemies), top_k=5
+        )
+        self.assertEqual(len(recommendations), 5)
+        self.assertFalse({item.hero_id for item in recommendations} & set(allies + enemies))
+
+    def test_uneven_boards_do_not_inflate_the_win_probability(self) -> None:
+        # state_strength is centred, so revealing one more hero per side shifts the
+        # estimate by that hero's own strength rather than by a count artefact.
+        allies = tuple(self.catalog.resolve(name) for name in ("Crystal Maiden", "Witch Doctor"))
+        enemies = tuple(self.catalog.resolve(name) for name in ("Spectre", "Anti-Mage"))
+        balanced, _ = self.model.recommend(
+            DraftState(phase=2, allies=allies, enemies=enemies), top_k=1
+        )
+        ahead, _ = self.model.recommend(
+            DraftState(phase=2, allies=allies, enemies=enemies[:1]), top_k=1
+        )
+        self.assertLess(
+            abs(
+                balanced[0].predicted_win_probability
+                - ahead[0].predicted_win_probability
+            ),
+            0.10,
+        )
+
     def test_the_pool_never_suggests_a_visible_hero(self) -> None:
         state, _ = self._opposite_round_two_drafts()
         recommendations, _ = self.model.recommend(state, top_k=20, candidate_pool=10)
