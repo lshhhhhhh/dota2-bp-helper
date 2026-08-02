@@ -12,19 +12,34 @@ from .outcome import OutcomeEmbeddingModel
 from .state import DraftState
 
 
-# How many of the heroes players are most likely to pick get ranked ahead of the
-# rest. Chosen by sweeping the held-out set for every bracket. At 20 the round-2
-# list stops being dominated by a single fixed set of five (81-89% of drafts down
-# to 6-11%), the number of heroes that ever reach the top five goes from 5-7 to
-# 44-51, and top-5 hit rate roughly doubles, while same-state pairwise accuracy
-# stays above chance in all three brackets.
+# How much weight the ranking gives to heroes this particular draft calls for,
+# measured as log P(hero | draft) - log P(hero | round): how far the board moved
+# human preference for a hero relative to that hero's own popularity.
 #
-# Do not "round up" to 40. That value scores 0.5113 on legend-and-above with a 95%
-# interval of [0.4984, 0.5243], which includes chance, and legend-and-above is the
-# app's default model. The dip is local: 20 beats 40 there on every metric.
-# `python -m d2draft.ranking_benchmark --candidate-pool N` re-runs the sweep.
-# None disables the pool and restores the near-fixed tier list.
-DEFAULT_CANDIDATE_POOL = 20
+# This is not a conflict detector. Players do avoid clashes -- every hard carry's
+# pick probability collapses 7-20x once Spectre is on the team -- but the term
+# only reads preference relative to a hero's baseline, and a hero can stay above
+# its baseline while still being a poor fit. It promotes heroes the board asks
+# for, which in practice pushes supports up when a team needs them.
+#
+# The raw policy cannot be used for this: it is dominated by popularity and ranks
+# at chance. Subtracting the marginal leaves the part driven by the draft. At 0.15
+# it beats a plain candidate pool on the winner/loser hit gap in all three
+# brackets and on pairwise accuracy in two, with two to three times more heroes
+# reaching the top five.
+#
+# Phase 1 is inert by construction: with nothing revealed the conditional and the
+# marginal are the same distribution over the same legal heroes, so the term is
+# exactly zero and the ranking falls back to predicted win probability.
+DEFAULT_POLICY_SURPRISE = 0.15
+
+# Superseded by the surprise term above, which measures the same thing
+# continuously and scores better. Kept because it is a useful lever on its own:
+# pass an integer to rank that many likely picks ahead of the rest. Note the
+# effect is not monotonic -- a pool of 40 scores 0.5113 on legend-and-above, whose
+# interval [0.4984, 0.5243] includes chance. Stacking a pool on top of the
+# surprise term scores worse than the surprise term alone in every bracket.
+DEFAULT_CANDIDATE_POOL = None
 _POOL_DEMOTION = 100.0
 
 
@@ -231,12 +246,39 @@ class HybridRecommender:
         penalty[ranked[candidate_pool:]] = _POOL_DEMOTION
         return penalty
 
+    def _policy_surprise(
+        self, policy: np.ndarray, legal: np.ndarray, phase: int
+    ) -> np.ndarray:
+        """How far this draft moved human preference, net of a hero's popularity.
+
+        ``log P(hero | this draft) - log P(hero | this round)``. A hero that is
+        merely rare scores zero; one that players drop *because of what is already
+        on the board* scores strongly negative, which is the only trace the data
+        keeps of heroes clashing with each other.
+        """
+
+        def normalize(values: np.ndarray) -> np.ndarray:
+            logits = np.where(legal, values, -np.inf)
+            logits = logits - logits.max()
+            return logits - np.log(np.exp(logits).sum())
+
+        conditional = normalize(policy)
+        # Normalised the same way and over the same legal heroes, so at phase 1 --
+        # where the policy *is* the marginal -- the two cancel exactly and the
+        # ranking falls back to predicted win probability alone.
+        marginal = normalize(np.log(np.maximum(self.phase_frequency[phase - 1], 1.0)))
+        difference = np.subtract(
+            conditional, marginal, out=np.zeros_like(conditional), where=legal
+        )
+        return np.where(legal, difference, 0.0)
+
     def score_arrays(
         self,
         state: DraftState,
         *,
         value_blend: float = 0.25,
         candidate_pool: int | None = DEFAULT_CANDIDATE_POOL,
+        policy_surprise: float = DEFAULT_POLICY_SURPRISE,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, str]:
         policy, policy_kind = self._policy_logits(state)
         legal = np.ones(len(self.hero_ids), dtype=bool)
@@ -255,6 +297,10 @@ class HybridRecommender:
         else:
             value_delta = self.value_weight * self.hero_strength
             combined = _zscore_legal(policy, legal) + value_blend * _zscore_legal(value_delta, legal)
+        if policy_surprise:
+            combined = combined + policy_surprise * self._policy_surprise(
+                policy, legal, state.phase
+            )
         combined = combined - self._pool_penalty(policy, legal, candidate_pool)
         combined[~legal] = -1e9
         legal_policy = policy.copy()
@@ -270,9 +316,13 @@ class HybridRecommender:
         top_k: int = 10,
         value_blend: float = 0.25,
         candidate_pool: int | None = DEFAULT_CANDIDATE_POOL,
+        policy_surprise: float = DEFAULT_POLICY_SURPRISE,
     ) -> tuple[list[Recommendation], str]:
         combined, probability, value_delta, legal, policy_kind = self.score_arrays(
-            state, value_blend=value_blend, candidate_pool=candidate_pool
+            state,
+            value_blend=value_blend,
+            candidate_pool=candidate_pool,
+            policy_surprise=policy_surprise,
         )
         order = np.argsort(-combined)
         result: list[Recommendation] = []

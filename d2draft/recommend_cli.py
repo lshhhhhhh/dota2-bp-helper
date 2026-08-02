@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .recommender import (
     DEFAULT_CANDIDATE_POOL,
+    DEFAULT_POLICY_SURPRISE,
     HeroCatalog,
     HybridRecommender,
     resolve_many,
@@ -44,6 +45,16 @@ def main() -> None:
             "probability, which produces a nearly fixed list"
         ),
     )
+    parser.add_argument(
+        "--policy-surprise",
+        type=float,
+        default=DEFAULT_POLICY_SURPRISE,
+        help=(
+            "weight on how far this draft moved human preference for a hero, "
+            "relative to that hero's popularity for the round; 0 ranks purely by "
+            "predicted win probability and cannot see heroes clashing"
+        ),
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -69,6 +80,7 @@ def main() -> None:
         top_k=args.top_k,
         value_blend=value_blend,
         candidate_pool=args.candidate_pool or None,
+        policy_surprise=args.policy_surprise,
     )
     if args.json:
         print(

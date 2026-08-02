@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-02T06:08:52.221457+00:00",
+  "generated_at_utc": "2026-08-02T06:40:27.593813+00:00",
   "model_id": "mvp-7.41-archon_below-20260802T033127",
   "rank_bracket": "统帅及以下",
   "patch": "7.41",
@@ -14,69 +14,69 @@
       "state_responsiveness": {
         "decisions": 4000,
         "top_k": 5,
-        "distinct_top_1": 17,
-        "distinct_top_5": 51,
+        "distinct_top_1": 70,
+        "distinct_top_5": 105,
         "heroes": 127,
-        "top_5_change_rate": 1.0,
-        "mean_spearman_vs_static": 0.3797720197084739,
-        "median_rank_swing": 68.0,
-        "max_rank_swing": 108.0
+        "top_5_change_rate": 0.997,
+        "mean_spearman_vs_static": 0.5925386040612112,
+        "median_rank_swing": 124.0,
+        "max_rank_swing": 126.0
       },
       "same_state_pairwise": {
         "comparisons": 7106,
         "matches": 3553,
-        "accuracy": 0.5208274697438784,
+        "accuracy": 0.5358851674641149,
         "approximate_95_ci": [
-          0.5092120109816283,
-          0.5324429285061285
+          0.5242895985280203,
+          0.5474807364002094
         ],
-        "points_above_chance": 2.082746974387839
+        "points_above_chance": 3.5885167464114853
       },
       "outcome_split_hit": {
         "top_k": 5,
         "matches": 3553,
-        "winning_side_hit_rate": 0.17478187447227694,
-        "losing_side_hit_rate": 0.13650436251055445,
-        "difference_points": 3.827751196172249,
+        "winning_side_hit_rate": 0.15902054601745005,
+        "losing_side_hit_rate": 0.1187728679988742,
+        "difference_points": 4.024767801857585,
         "approximate_95_ci_points": [
-          2.1390838744786573,
-          5.51641851786584
+          2.4150521405235432,
+          5.634483463191627
         ]
       },
       "stratified_association": {
         "top_k": 5,
         "strata": 10,
         "unstratified": {
-          "followed_decisions": 1106,
-          "followed_win_rate": 0.5614828209764918,
-          "other_decisions": 6000,
-          "other_win_rate": 0.4886666666666667,
-          "observed_difference_points": 7.281615430982513,
+          "followed_decisions": 987,
+          "followed_win_rate": 0.5724417426545086,
+          "other_decisions": 6119,
+          "other_win_rate": 0.4883150841640791,
+          "observed_difference_points": 8.412665849042956,
           "approximate_95_ci_points": [
-            4.095381192028057,
-            10.467849669936967
+            5.081761808864678,
+            11.743569889221233
           ]
         },
-        "stratified_difference_points": 7.202292830599603,
-        "followed_decisions": 1106
+        "stratified_difference_points": 8.648401019497518,
+        "followed_decisions": 987
       },
       "off_policy_value": {
-        "estimate": 0.5103538984965401,
+        "estimate": 0.5432962611417652,
         "approximate_95_ci": [
-          0.4926974647172977,
-          0.5280103322757825
+          0.5227761717007614,
+          0.563816350582769
         ],
         "decisions": 7106,
-        "effective_sample_size": 3077.072324945801,
-        "effective_fraction": 0.4330245320779343,
-        "clipped_fraction": 0.0,
+        "effective_sample_size": 2251.668789982822,
+        "effective_fraction": 0.3168686729500172,
+        "clipped_fraction": 0.00028145229383619476,
         "behavior_probability_median": 0.017895523066575207,
         "behavior_below_uniform_fraction": 0.27680833098789753,
         "usable": true,
         "temperature": 0.1,
         "clip": 20.0,
         "uniform_target_estimate": 0.4631472623502689,
-        "target_sensitivity": 0.04720663614627124
+        "target_sensitivity": 0.08014899879149634
       }
     },
     "outcome_recommender": {

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from d2draft.recommender import (
-    DEFAULT_CANDIDATE_POOL,
+    DEFAULT_POLICY_SURPRISE,
     HeroCatalog,
     HybridRecommender,
 )
@@ -83,8 +83,12 @@ class RecommenderIntegrationTest(unittest.TestCase):
             DraftState(phase=2, allies=cores, enemies=supports),
         )
 
-    def _top_ids(self, state: DraftState, pool: int | None) -> set[int]:
-        recommendations, _ = self.model.recommend(state, top_k=5, candidate_pool=pool)
+    def _top_ids(
+        self, state: DraftState, pool: int | None, *, surprise: float = 0.0
+    ) -> set[int]:
+        recommendations, _ = self.model.recommend(
+            state, top_k=5, candidate_pool=pool, policy_surprise=surprise
+        )
         return {item.hero_id for item in recommendations}
 
     def test_without_the_pool_opposite_drafts_get_the_same_list(self) -> None:
@@ -95,14 +99,51 @@ class RecommenderIntegrationTest(unittest.TestCase):
 
     def test_the_pool_makes_the_list_respond_to_the_draft(self) -> None:
         first, second = self._opposite_round_two_drafts()
-        overlap = self._top_ids(first, DEFAULT_CANDIDATE_POOL) & self._top_ids(
-            second, DEFAULT_CANDIDATE_POOL
+        overlap = self._top_ids(first, 20) & self._top_ids(second, 20)
+        self.assertLessEqual(len(overlap), 3)
+
+    def test_the_surprise_term_makes_the_list_respond_without_any_pool(self) -> None:
+        first, second = self._opposite_round_two_drafts()
+        overlap = self._top_ids(first, None, surprise=DEFAULT_POLICY_SURPRISE) & self._top_ids(
+            second, None, surprise=DEFAULT_POLICY_SURPRISE
         )
         self.assertLessEqual(len(overlap), 3)
 
+    def test_the_surprise_term_is_inert_in_round_one(self) -> None:
+        # With nothing revealed the policy is the marginal, so they cancel exactly.
+        empty = DraftState(phase=1, allies=(), enemies=())
+        self.assertEqual(
+            self._top_ids(empty, None, surprise=0.0),
+            self._top_ids(empty, None, surprise=DEFAULT_POLICY_SURPRISE),
+        )
+
+    def test_the_surprise_term_ranks_a_clashing_carry_below_the_pool(self) -> None:
+        # A second farm-hungry carry behind Spectre is the kind of suggestion that
+        # costs a user's trust. Neither mechanism removes it -- the policy only
+        # says it is 7x less likely, not impossible -- but the surprise term keeps
+        # it further down the list than a candidate pool does.
+        enemies = tuple(
+            self.catalog.resolve(n)
+            for n in ("Phantom Lancer", "Hoodwink", "Necrophos", "Bane")
+        )
+        allies = tuple(
+            self.catalog.resolve(n)
+            for n in ("Legion Commander", "Skywrath Mage", "Tusk", "Spectre")
+        )
+        carry = self.catalog.resolve("Sven")
+        state = DraftState(phase=3, allies=allies, enemies=enemies)
+
+        def rank_of(**options) -> int:
+            recommendations, _ = self.model.recommend(state, top_k=127, **options)
+            return next(i.rank for i in recommendations if i.hero_id == carry)
+
+        pooled = rank_of(candidate_pool=20, policy_surprise=0.0)
+        surprised = rank_of(candidate_pool=None, policy_surprise=DEFAULT_POLICY_SURPRISE)
+        self.assertGreater(surprised, pooled)
+
     def test_a_smaller_pool_separates_the_two_drafts_further(self) -> None:
         first, second = self._opposite_round_two_drafts()
-        wide = len(self._top_ids(first, 40) & self._top_ids(second, 40))
+        wide = len(self._top_ids(first, 60) & self._top_ids(second, 60))
         narrow = len(self._top_ids(first, 10) & self._top_ids(second, 10))
         self.assertLess(narrow, wide)
 

@@ -43,7 +43,7 @@ from typing import Any
 import numpy as np
 
 from .outcome import OutcomeEmbeddingModel, OutcomeExamples
-from .recommender import DEFAULT_CANDIDATE_POOL
+from .recommender import DEFAULT_CANDIDATE_POOL, DEFAULT_POLICY_SURPRISE
 
 
 RADIANT, DIRE = 0, 1
@@ -545,6 +545,37 @@ def evaluate_method(
     return report
 
 
+def _with_policy_surprise(
+    outcome: np.ndarray,
+    behavior: np.ndarray,
+    legal: np.ndarray,
+    phase_frequency: np.ndarray,
+    phases: np.ndarray,
+    weight: float,
+) -> np.ndarray:
+    """Reproduce what the app ships: win odds plus a draft-driven preference term.
+
+    Mirrors ``HybridRecommender._policy_surprise`` so the benchmark scores the
+    configuration users actually see.
+    """
+
+    if not weight:
+        return outcome
+    def normalize(values: np.ndarray) -> np.ndarray:
+        logits = np.where(legal, values, -np.inf)
+        logits = logits - logits.max(axis=1, keepdims=True)
+        return logits - np.log(np.exp(logits).sum(axis=1, keepdims=True))
+
+    odds = np.log(np.clip(outcome, 1e-9, 1 - 1e-9) / np.clip(1 - outcome, 1e-9, 1))
+    counts = np.maximum(np.asarray(phase_frequency, dtype=np.float64), 1.0)
+    conditional = normalize(behavior)
+    marginal = normalize(np.log(counts)[phases - 1])
+    surprise = np.subtract(
+        conditional, marginal, out=np.zeros_like(conditional), where=legal
+    )
+    return odds + weight * np.where(legal, surprise, 0.0)
+
+
 def _with_candidate_pool(
     outcome: np.ndarray, behavior: np.ndarray, legal: np.ndarray, pool: int
 ) -> np.ndarray:
@@ -602,6 +633,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
         outcome_scores = _batched_scores(model, rex.examples, heroes)
         behavior = _policy_scores(rex.examples, artifact)
+        phase_frequency = artifact["phase_frequency"].astype(np.float64)
         static = np.broadcast_to(
             (artifact["value_weight"][0] * artifact["hero_strength"]).astype(np.float32),
             outcome_scores.shape,
@@ -619,7 +651,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     methods = {
         "shipped_recommender": _with_candidate_pool(
-            outcome_scores, behavior, legal, args.candidate_pool
+            _with_policy_surprise(
+                outcome_scores,
+                behavior,
+                legal,
+                phase_frequency,
+                rex.examples.phase,
+                args.policy_surprise,
+            ),
+            behavior,
+            legal,
+            args.candidate_pool or 0,
         ),
         "outcome_recommender": outcome_scores,
         "static_hero_strength": static,
@@ -680,7 +722,8 @@ def main() -> None:
     parser.add_argument("--phase", type=int, default=3, choices=(1, 2, 3))
     parser.add_argument("--top-k", type=int, default=5)
     parser.add_argument("--temperature", type=float, default=0.1)
-    parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL)
+    parser.add_argument("--candidate-pool", type=int, default=DEFAULT_CANDIDATE_POOL or 0)
+    parser.add_argument("--policy-surprise", type=float, default=DEFAULT_POLICY_SURPRISE)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     print(json.dumps(run(args), ensure_ascii=True, indent=2))
