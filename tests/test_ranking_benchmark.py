@@ -8,6 +8,7 @@ from d2draft.ranking_benchmark import (
     evaluate_method,
     legal_mask,
     off_policy_value,
+    outcome_split_hit,
     ranking_examples,
     same_state_pairwise,
     state_responsiveness,
@@ -158,6 +159,48 @@ class SameStatePairwiseTest(unittest.TestCase):
         )
         self.assertEqual(report["comparisons"], 4)
         self.assertIn(report["accuracy"], (0.0, 0.25, 0.5, 0.75, 1.0))
+
+
+class OutcomeSplitHitTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.rex = ranking_examples(two_matches(), IDENTITY)
+        self.legal = legal_mask(self.rex.examples, HEROES)
+
+    def scores_favouring(self, heroes: list[int]) -> np.ndarray:
+        scores = np.zeros((len(self.rex), HEROES))
+        for hero in heroes:
+            scores[:, hero] = 5.0
+        return scores
+
+    def test_ranking_only_winning_picks_gives_the_maximum_difference(self) -> None:
+        # heroes 4 and 11 are the round-3 picks of the two winning sides
+        report = outcome_split_hit(
+            self.rex, self.scores_favouring([4, 11]), self.legal, phase=3, top_k=1
+        )
+        self.assertEqual(report["matches"], 2)
+        self.assertEqual(report["winning_side_hit_rate"], 1.0)
+        self.assertEqual(report["losing_side_hit_rate"], 0.0)
+        self.assertAlmostEqual(report["difference_points"], 100.0)
+
+    def test_ranking_only_losing_picks_inverts_the_difference(self) -> None:
+        report = outcome_split_hit(
+            self.rex, self.scores_favouring([9, 10]), self.legal, phase=3, top_k=1
+        )
+        self.assertAlmostEqual(report["difference_points"], -100.0)
+
+    def test_an_imitator_that_ranks_both_sides_equally_scores_zero(self) -> None:
+        # A model whose top-K contains every actual pick has perfect hit rates on
+        # both sides and therefore no ability to tell them apart.
+        report = outcome_split_hit(
+            self.rex,
+            self.scores_favouring([4, 9, 10, 11]),
+            self.legal,
+            phase=3,
+            top_k=4,
+        )
+        self.assertEqual(report["winning_side_hit_rate"], 1.0)
+        self.assertEqual(report["losing_side_hit_rate"], 1.0)
+        self.assertAlmostEqual(report["difference_points"], 0.0)
 
 
 def stratum(*, win_rate: float, followed: int, size: int = 100) -> np.ndarray:

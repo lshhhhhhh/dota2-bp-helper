@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-02T05:03:45.227392+00:00",
+  "generated_at_utc": "2026-08-02T05:12:30.729176+00:00",
   "model_id": "mvp-7.41-legend_plus-20260802T033124",
   "rank_bracket": "传奇及以上",
   "patch": "7.41",
@@ -31,6 +31,17 @@
           0.5371680238157016
         ],
         "points_above_chance": 2.424136728287407
+      },
+      "outcome_split_hit": {
+        "top_k": 5,
+        "matches": 2867,
+        "winning_side_hit_rate": 0.09312870596442274,
+        "losing_side_hit_rate": 0.0711545169166376,
+        "difference_points": 2.197418904778514,
+        "approximate_95_ci_points": [
+          0.7605195562775243,
+          3.634318253279504
+        ]
       },
       "stratified_association": {
         "top_k": 5,
@@ -92,6 +103,17 @@
         ],
         "points_above_chance": 2.3892570631321886
       },
+      "outcome_split_hit": {
+        "top_k": 5,
+        "matches": 2867,
+        "winning_side_hit_rate": 0.04848273456574817,
+        "losing_side_hit_rate": 0.0394140216253924,
+        "difference_points": 0.9068712940355772,
+        "approximate_95_ci_points": [
+          -0.17373934236698182,
+          1.9874819304381361
+        ]
+      },
       "stratified_association": {
         "top_k": 5,
         "strata": 10,
@@ -152,6 +174,17 @@
         ],
         "points_above_chance": 0.3139169863969338
       },
+      "outcome_split_hit": {
+        "top_k": 5,
+        "matches": 2867,
+        "winning_side_hit_rate": 0.25880711545169166,
+        "losing_side_hit_rate": 0.2326473665852808,
+        "difference_points": 2.6159748866410886,
+        "approximate_95_ci_points": [
+          0.40135219319005316,
+          4.830597580092124
+        ]
+      },
       "stratified_association": {
         "top_k": 5,
         "strata": 10,
@@ -211,6 +244,17 @@
           0.5176500567892741
         ],
         "points_above_chance": 0.47087547959540066
+      },
+      "outcome_split_hit": {
+        "top_k": 5,
+        "matches": 2867,
+        "winning_side_hit_rate": 0.038018835019183815,
+        "losing_side_hit_rate": 0.04464597139867457,
+        "difference_points": -0.6627136379490757,
+        "approximate_95_ci_points": [
+          -1.6971468167715376,
+          0.3717195408733862
+        ]
       },
       "stratified_association": {
         "top_k": 5,

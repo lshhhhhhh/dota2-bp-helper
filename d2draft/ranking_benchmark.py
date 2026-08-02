@@ -282,6 +282,66 @@ def same_state_pairwise(
     }
 
 
+def outcome_split_hit(
+    rex: RankingExamples,
+    scores: np.ndarray,
+    legal: np.ndarray,
+    *,
+    phase: int,
+    top_k: int = 5,
+) -> dict[str, Any]:
+    """Top-K hit rate on the winning side minus the losing side, paired by match.
+
+    This measures what the UI actually shows: was the hero a player really took
+    inside the visible top K. Both sides are treated as reasonable references,
+    because every human pick is a plausible pick; the question is only whether
+    the model separates the side that went on to win from the side that did not.
+
+    Report the difference, never a weighted sum of the two hit rates. Both terms
+    are maximised by imitating player behaviour, so any sum with two positive
+    weights ranks a pure pick-prediction model first no matter how it ranks.
+    """
+
+    mask = rex.examples.phase == phase
+    rows = np.flatnonzero(mask)
+    if len(rows) == 0:
+        return {"matches": 0, "difference_points": None}
+
+    masked = np.where(legal[rows], scores[rows], -np.inf)
+    chosen = rex.examples.candidate[rows].astype(np.int64)
+    picked = masked[np.arange(len(rows)), chosen]
+    hit = (1 + np.sum(masked > picked[:, None], axis=1)) <= top_k
+
+    won = rex.examples.outcome[rows] == 1
+    matches = rex.match_index[rows]
+    order = np.argsort(matches, kind="mergesort")
+    grouped = np.split(order, np.flatnonzero(np.diff(matches[order])) + 1)
+
+    per_match: list[float] = []
+    for group in grouped:
+        winning, losing = hit[group][won[group]], hit[group][~won[group]]
+        if len(winning) == 0 or len(losing) == 0:
+            continue
+        per_match.append(float(winning.mean()) - float(losing.mean()))
+    if not per_match:
+        return {"matches": 0, "difference_points": None}
+
+    paired = np.asarray(per_match)
+    difference = float(paired.mean())
+    error = float(paired.std(ddof=1) / math.sqrt(len(paired))) if len(paired) > 1 else 0.0
+    return {
+        "top_k": top_k,
+        "matches": int(len(paired)),
+        "winning_side_hit_rate": float(hit[won].mean()),
+        "losing_side_hit_rate": float(hit[~won].mean()),
+        "difference_points": difference * 100.0,
+        "approximate_95_ci_points": [
+            (difference - 1.96 * error) * 100.0,
+            (difference + 1.96 * error) * 100.0,
+        ],
+    }
+
+
 def _difference(followed: np.ndarray, other: np.ndarray) -> dict[str, Any]:
     if len(followed) == 0 or len(other) == 0:
         return {
@@ -464,6 +524,9 @@ def evaluate_method(
         "decisions": int(len(rows)),
         "state_responsiveness": state_responsiveness(phase_scores, top_k=top_k),
         "same_state_pairwise": same_state_pairwise(rex, scores, legal),
+        "outcome_split_hit": outcome_split_hit(
+            rex, scores, legal, phase=phase, top_k=top_k
+        ),
     }
     if state_value is not None:
         report["stratified_association"] = stratified_association(

@@ -75,6 +75,35 @@ Outcome 模型的状态项对所有候选加同一个数：它改变预测胜率
 Outcome 模型的推荐实质上是一张静态梯度榜。Policy 是真正随阵容变化的，但它的
 排序在配对指标上只有 0.503～0.505，等于随机 —— 会看阵容并不等于排得准。
 
+### 胜败方 top-5 命中差
+
+`outcome_split_hit` 衡量界面上真正显示的东西：玩家实际选的英雄有没有落在推荐
+前五。胜方和败方都当作合理参考 —— 人类的选择基本都说得通 —— 只问模型能不能把
+后来赢的那一方和输的那一方分开。按比赛配对统计。
+
+| 方法 | 传奇及以上 | 统帅及以下 | 全段位 |
+| --- | ---: | ---: | ---: |
+| Outcome 模型 | +2.20 点 | +3.94 点 | +2.74 点 |
+| 静态英雄强度榜 | +0.91 点 | +3.55 点 | +2.78 点 |
+| Policy（模仿玩家选择） | +2.62 点 | +2.17 点 | +1.38 点 |
+| 随机 | −0.66 点 | +0.31 点 | −0.20 点 |
+
+**只能报告差值，不能报告两个命中率的加权和。**两项都会被「猜中玩家会选什么」
+同时拉满：以 `w_胜=2, w_败=1` 计算，第三轮 Policy 得 0.755、Outcome 得 0.302，
+纯模仿模型会以 2.5 倍排到第一，而它的同状态配对准确率只有 0.504，等于随机。
+
+差值本身也不是完全干净的：Policy 在这一项上拿到 +1.38～+2.62，传奇及以上一档
+甚至最高，但它的排序能力是随机。机制是获胜方倾向于选更主流、更好预测的英雄，
+所以一个模仿模型不需要任何排序能力也能拿到正的差值。
+
+因此这两项要一起看：`same_state_pairwise` 用上了完整排序、与英雄流行度无关，是
+更稳健的排序判据；`outcome_split_hit` 更贴近产品实际展示，但会奖励与玩家行为
+重合。两者在传奇及以上一档结论不同（配对指标上 Outcome 与静态榜打平，命中差上
+Outcome 领先 1.3 点），原因是该分段玩家很少选静态榜推荐的英雄（H@5 仅 0.049），
+命中率过低把差值压向了零 —— 那反映的是推荐与玩家行为的重合度，不是排序质量。
+
+### 离线策略评估当前不可用
+
 `off_policy_value` 使用 Policy 作为倾向性模型做自归一化 IPS。当前三套模型上它
 都被标记为 `usable: false`：有效样本量只有 19%～21%，且把目标策略换成均匀分布
 后估计值只变化 0.006～0.007，说明数字由 `1/μ` 分母主导，与被评估的模型无关。
@@ -170,6 +199,42 @@ caused by heroes being unavailable excluded):
 The outcome model's recommendation is a static tier list in practice. Policy does
 respond to the draft, but its ranking scores 0.503–0.505 on the pairwise test,
 which is chance: reacting to the lineup is not the same as ranking well.
+
+### Winner/loser top-5 hit gap
+
+`outcome_split_hit` measures what the UI actually shows: whether the hero a player
+really took landed inside the visible top five. Both sides count as reasonable
+references — human picks are broadly sensible — so the only question is whether the
+model separates the side that went on to win from the side that did not. Paired by
+match.
+
+| Method | Legend and above | Archon and below | All ranks |
+| --- | ---: | ---: | ---: |
+| Outcome model | +2.20 pts | +3.94 pts | +2.74 pts |
+| Static hero strength | +0.91 pts | +3.55 pts | +2.78 pts |
+| Policy (pick imitation) | +2.62 pts | +2.17 pts | +1.38 pts |
+| Random | −0.66 pts | +0.31 pts | −0.20 pts |
+
+**Report the difference, never a weighted sum of the two hit rates.** Both terms are
+maximised by predicting what players pick: with `w_win=2, w_loss=1` at round 3,
+Policy scores 0.755 and the outcome model 0.302, so a pure imitation model ranks
+first by 2.5x while its same-state pairwise accuracy is 0.504, which is chance.
+
+The difference is not fully clean either. Policy scores +1.38 to +2.62 here, highest
+of all methods in the legend-and-above bracket, with no ranking ability at all. The
+mechanism is that winning sides pick more mainstream, more predictable heroes, so an
+imitator gets a positive gap without ranking anything.
+
+Read the two together. `same_state_pairwise` uses the full ordering and is
+independent of hero popularity, so it is the more robust ranking verdict.
+`outcome_split_hit` is closer to what the product displays but rewards overlap with
+player behaviour. They disagree for legend and above — a tie on the pairwise test,
+a 1.3 point lead for the outcome model on the hit gap — because players in that
+bracket rarely take the static list's heroes at all (H@5 of 0.049), and a hit rate
+that low compresses the gap toward zero. That reflects overlap with player
+behaviour, not ranking quality.
+
+### Off-policy evaluation is currently unusable
 
 `off_policy_value` runs self-normalised IPS with Policy as the propensity model.
 It is currently marked `usable: false` for all three models: effective sample size
