@@ -1449,13 +1449,24 @@ class DraftDesktopApp:
         }
 
     @staticmethod
-    def _screen_match_quality(matches: dict[str, list[VisionMatch]]) -> tuple[int, int, float]:
-        radiant = sum(match.hero_id is not None for match in matches["radiant"])
-        dire = sum(match.hero_id is not None for match in matches["dire"])
-        accepted = radiant + dire
-        valid_stage = int(radiant == dire and radiant in {0, 2, 4, 5})
+    def _screen_match_quality(matches: dict[str, list[VisionMatch]]) -> tuple[int, float]:
+        """Rank viewport crops by how much of a draft each one actually yields.
+
+        This used to lead with whether the two sides held equal counts of 0, 2, 4,
+        or 5. Nothing satisfies that more cheaply than recognising nothing at all:
+        0 == 0 scored as a valid draft, so a crop that found no heroes outranked
+        one that correctly read an uneven board. Partial recognition of a small
+        letterboxed stream lands on uneven counts routinely, and the whole capture
+        then reported nothing.
+        """
+
+        accepted = sum(
+            match.hero_id is not None
+            for values in matches.values()
+            for match in values
+        )
         evidence = sum(match.similarity for values in matches.values() for match in values)
-        return valid_stage, accepted, evidence
+        return accepted, evidence
 
     def capture_screen(self, silent: bool = False) -> None:
         if not silent:

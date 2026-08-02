@@ -26,6 +26,61 @@ def tk_available() -> bool:
     return True
 
 
+class ViewportRankingTest(unittest.TestCase):
+    """`_screen_match_quality` is static, so this needs no display."""
+
+    @staticmethod
+    def _matches(radiant: int, dire: int, similarity: float = 0.8) -> dict:
+        from d2draft.vision import VisionMatch
+
+        def side(found: int) -> list:
+            return [
+                VisionMatch(
+                    slot=index,
+                    hero_id=1 + index,
+                    name=f"hero {index}",
+                    similarity=similarity,
+                    margin=0.1,
+                    accepted=True,
+                )
+                if index < found
+                else VisionMatch(
+                    slot=index,
+                    hero_id=None,
+                    name="",
+                    similarity=0.0,
+                    margin=0.0,
+                    accepted=False,
+                )
+                for index in range(5)
+            ]
+
+        return {"radiant": side(radiant), "dire": side(dire)}
+
+    def _quality(self, radiant: int, dire: int):
+        from d2draft.desktop import DraftDesktopApp
+
+        return DraftDesktopApp._screen_match_quality(self._matches(radiant, dire))
+
+    def test_an_uneven_read_beats_recognising_nothing(self) -> None:
+        # The old key led with "both sides equal and in {0,2,4,5}", which 0 == 0
+        # satisfies, so an empty crop outranked a correct uneven board and the
+        # whole capture reported nothing.
+        self.assertGreater(self._quality(3, 2), self._quality(0, 0))
+
+    def test_more_heroes_always_ranks_higher(self) -> None:
+        self.assertGreater(self._quality(5, 5), self._quality(4, 3))
+        self.assertGreater(self._quality(4, 3), self._quality(2, 2))
+        self.assertGreater(self._quality(2, 2), self._quality(0, 0))
+
+    def test_evidence_breaks_ties_at_equal_counts(self) -> None:
+        from d2draft.desktop import DraftDesktopApp
+
+        strong = DraftDesktopApp._screen_match_quality(self._matches(2, 2, 0.9))
+        weak = DraftDesktopApp._screen_match_quality(self._matches(2, 2, 0.6))
+        self.assertGreater(strong, weak)
+
+
 @unittest.skipUnless(tk_available(), "no display available for Tk")
 class DesktopUiTest(unittest.TestCase):
     def setUp(self) -> None:
