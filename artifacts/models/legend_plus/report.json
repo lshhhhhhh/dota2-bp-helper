@@ -1,0 +1,89 @@
+{
+  "generated_at_utc": "2026-08-02T01:42:00.788551+00:00",
+  "seed": 20260801,
+  "split": "oldest 80% train, newest 20% test",
+  "heroes": 127,
+  "patch_filter": [
+    "7.41"
+  ],
+  "rank_filter": {
+    "minimum_avg_rank_tier": 50,
+    "maximum_avg_rank_tier_exclusive": null
+  },
+  "value": {
+    "train_matches": 21392,
+    "test_matches": 5349,
+    "baseline": {
+      "auc": 0.5564316371529312,
+      "log_loss": 0.6864393305437124,
+      "brier": 0.24666983225744052,
+      "accuracy": 0.5387922976257244,
+      "ece_10": 0.010069913336173826
+    },
+    "neural": {
+      "auc": 0.5567209517355367,
+      "log_loss": 0.6911104186811166,
+      "brier": 0.2489178906745792,
+      "accuracy": 0.5382314451299308,
+      "ece_10": 0.039968173948821246
+    }
+  },
+  "policy": {
+    "train_matches": 19508,
+    "test_matches": 4878,
+    "train_examples": 117048,
+    "test_examples": 29268,
+    "baseline": {
+      "overall": {
+        "examples": 29268,
+        "hit_at_5": 0.14104141041410415,
+        "hit_at_10": 0.25550088834221674,
+        "mrr": 0.1087498680319652,
+        "median_rank": 26.0
+      },
+      "phase_2": {
+        "examples": 19512,
+        "hit_at_5": 0.1313550635506355,
+        "hit_at_10": 0.23226732267322672,
+        "mrr": 0.104905355404363,
+        "median_rank": 28.0
+      },
+      "phase_3": {
+        "examples": 9756,
+        "hit_at_5": 0.1604141041410414,
+        "hit_at_10": 0.3019680196801968,
+        "mrr": 0.11643889328716962,
+        "median_rank": 20.0
+      }
+    },
+    "neural": {
+      "overall": {
+        "examples": 29268,
+        "hit_at_5": 0.1731583982506492,
+        "hit_at_10": 0.29995216618832854,
+        "mrr": 0.12889950584661608,
+        "median_rank": 22.0
+      },
+      "phase_2": {
+        "examples": 19512,
+        "hit_at_5": 0.13714637146371464,
+        "hit_at_10": 0.2473349733497335,
+        "mrr": 0.10922082844650476,
+        "median_rank": 27.0
+      },
+      "phase_3": {
+        "examples": 9756,
+        "hit_at_5": 0.24518245182451825,
+        "hit_at_10": 0.40518655186551866,
+        "mrr": 0.1682568606468387,
+        "median_rank": 14.0
+      }
+    }
+  },
+  "limitations": [
+    "The policy sample is intentionally small and is only a signal check.",
+    "Observed player picks are not a unique ground-truth optimal recommendation.",
+    "The public match sample is visibility-biased.",
+    "No role, lane, player proficiency, or expert tags are used."
+  ]
+}

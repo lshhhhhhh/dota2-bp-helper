@@ -1,0 +1,30 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.build-venv/
+.build-tools/
+build/
+dist/
+*.spec
+
+# Local training data, API responses, and machine-specific calibration
+data/collection/
+data/audit/
+data/audit_smoke/
+data/localization/
+data/game_portraits/
+data/screen_config.json
+screenshot/
+tools/vrf/
+
+# Research history that is not part of the shipped model set
+artifacts/archive/
+artifacts/candidates/
+artifacts/checkpoints/
+artifacts/learning_curve/
+artifacts/seeds/
+artifacts/*.log

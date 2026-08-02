@@ -1,0 +1,49 @@
+{
+  "generated_at_utc": "2026-08-02T01:44:22.485637+00:00",
+  "model_id": "mvp-7.41-all-20260802T014224",
+  "rank_bracket": "全段位",
+  "patch": "7.41",
+  "phase": 3,
+  "test_matches": 5663,
+  "test_decisions": 11326,
+  "value_blend": 0.0,
+  "groups": {
+    "top_1": {
+      "top_k": 1,
+      "followed_decisions": 745,
+      "followed_win_rate": 0.5261744966442953,
+      "other_decisions": 10581,
+      "other_win_rate": 0.4981570740005671,
+      "observed_difference_points": 2.8017422643728196,
+      "approximate_95_ci_points": [
+        -0.9081903560113118,
+        6.511674884756951
+      ]
+    },
+    "top_5": {
+      "top_k": 5,
+      "followed_decisions": 2840,
+      "followed_win_rate": 0.5059859154929578,
+      "other_decisions": 8486,
+      "other_win_rate": 0.49799670044779637,
+      "observed_difference_points": 0.7989215045161424,
+      "approximate_95_ci_points": [
+        -1.3254451538315952,
+        2.92328816286388
+      ]
+    },
+    "top_10": {
+      "top_k": 10,
+      "followed_decisions": 4717,
+      "followed_win_rate": 0.5049819800720797,
+      "other_decisions": 6609,
+      "other_win_rate": 0.4964442426993494,
+      "observed_difference_points": 0.8537737372730336,
+      "approximate_95_ci_points": [
+        -1.0140951404847567,
+        2.721642615030824
+      ]
+    }
+  },
+  "interpretation": "Historical association only. The groups are not randomized, so the observed win-rate difference is not a causal treatment effect."
+}

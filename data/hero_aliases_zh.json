@@ -1,0 +1,1184 @@
+{
+  "1": {
+    "chinese_name": "敌法师",
+    "aliases": [
+      "am",
+      "df",
+      "敌法",
+      "difa",
+      "difashi",
+      "yilidan"
+    ]
+  },
+  "2": {
+    "chinese_name": "斧王",
+    "aliases": [
+      "fw",
+      "axe",
+      "fuwang",
+      "mengge",
+      "biemowo"
+    ]
+  },
+  "3": {
+    "chinese_name": "祸乱之源",
+    "aliases": [
+      "hl",
+      "睡魔",
+      "bane",
+      "banni",
+      "shuimo",
+      "tongku",
+      "huoluan",
+      "shuitong"
+    ]
+  },
+  "4": {
+    "chinese_name": "血魔",
+    "aliases": [
+      "bs",
+      "xm",
+      "xuemo",
+      "xuebeng"
+    ]
+  },
+  "5": {
+    "chinese_name": "水晶室女",
+    "aliases": [
+      "bn",
+      "cm",
+      "冰女",
+      "huonv",
+      "lilai",
+      "bingnv",
+      "jianna"
+    ]
+  },
+  "6": {
+    "chinese_name": "卓尔游侠",
+    "aliases": [
+      "dr",
+      "小黑",
+      "黑弓",
+      "cuixisi",
+      "heigong",
+      "xiaohei",
+      "xierwanasi"
+    ]
+  },
+  "7": {
+    "chinese_name": "撼地者",
+    "aliases": [
+      "es",
+      "小牛",
+      "神牛",
+      "niutou",
+      "xiaoniu",
+      "handishenniu"
+    ]
+  },
+  "8": {
+    "chinese_name": "主宰",
+    "aliases": [
+      "js",
+      "剑圣",
+      "jug",
+      "jugg",
+      "zhuzai",
+      "jiansheng",
+      "younieruo"
+    ]
+  },
+  "9": {
+    "chinese_name": "米拉娜",
+    "aliases": [
+      "月女",
+      "白虎",
+      "pom",
+      "milana",
+      "tailande"
+    ]
+  },
+  "10": {
+    "chinese_name": "变体精灵",
+    "aliases": [
+      "水人",
+      "shuiren",
+      "biantijingling"
+    ]
+  },
+  "11": {
+    "chinese_name": "影魔",
+    "aliases": [
+      "sf",
+      "yingmo"
+    ]
+  },
+  "12": {
+    "chinese_name": "幻影长矛手",
+    "aliases": [
+      "pl",
+      "猴子",
+      "长矛手",
+      "houzi",
+      "xiaohou",
+      "huanyingchangmaoshou"
+    ]
+  },
+  "13": {
+    "chinese_name": "帕克",
+    "aliases": [
+      "仙女龙",
+      "pake",
+      "puck",
+      "xiannvlong"
+    ]
+  },
+  "14": {
+    "chinese_name": "帕吉",
+    "aliases": [
+      "屠夫",
+      "paji",
+      "tufu",
+      "sipangzi"
+    ]
+  },
+  "15": {
+    "chinese_name": "雷泽",
+    "aliases": [
+      "电魂",
+      "leize",
+      "tidao",
+      "diangun",
+      "dianhun"
+    ]
+  },
+  "16": {
+    "chinese_name": "沙王",
+    "aliases": [
+      "sk",
+      "xiezi",
+      "shawang"
+    ]
+  },
+  "17": {
+    "chinese_name": "风暴之灵",
+    "aliases": [
+      "ss",
+      "蓝猫",
+      "storm",
+      "lanmao",
+      "dianmao",
+      "fengbaozhiling"
+    ]
+  },
+  "18": {
+    "chinese_name": "斯温",
+    "aliases": [
+      "流浪",
+      "sven",
+      "siwen",
+      "aoteman",
+      "liulangjianke"
+    ]
+  },
+  "19": {
+    "chinese_name": "小小",
+    "aliases": [
+      "石头人",
+      "xiaoxiao",
+      "shanlingjuren"
+    ]
+  },
+  "20": {
+    "chinese_name": "复仇之魂",
+    "aliases": [
+      "vs",
+      "复仇",
+      "xiandeersha",
+      "fuchouzhihun"
+    ]
+  },
+  "21": {
+    "chinese_name": "风行者",
+    "aliases": [
+      "wr",
+      "风行",
+      "baigong",
+      "aoleiliya",
+      "fengxingzhe"
+    ]
+  },
+  "22": {
+    "chinese_name": "宙斯",
+    "aliases": [
+      "zeus",
+      "zhousi",
+      "zhongshenzhiwang"
+    ]
+  },
+  "23": {
+    "chinese_name": "昆卡",
+    "aliases": [
+      "th",
+      "船长",
+      "kunka",
+      "tongshuai",
+      "chuanzhang"
+    ]
+  },
+  "25": {
+    "chinese_name": "莉娜",
+    "aliases": [
+      "火女",
+      "lina",
+      "huonv"
+    ]
+  },
+  "26": {
+    "chinese_name": "莱恩",
+    "aliases": [
+      "恶魔巫师",
+      "laien",
+      "emowushi"
+    ]
+  },
+  "27": {
+    "chinese_name": "暗影萨满",
+    "aliases": [
+      "ss",
+      "小y",
+      "小歪",
+      "萨满",
+      "xiaoy",
+      "anyingsaman"
+    ]
+  },
+  "28": {
+    "chinese_name": "斯拉达",
+    "aliases": [
+      "sg",
+      "大鱼",
+      "大鱼人",
+      "silada",
+      "dayuren"
+    ]
+  },
+  "29": {
+    "chinese_name": "潮汐猎人",
+    "aliases": [
+      "th",
+      "潮汐",
+      "西瓜皮",
+      "kunka",
+      "chaoxilieren"
+    ]
+  },
+  "30": {
+    "chinese_name": "巫医",
+    "aliases": [
+      "51",
+      "wd",
+      "wuyi",
+      "zhawake"
+    ]
+  },
+  "31": {
+    "chinese_name": "巫妖",
+    "aliases": [
+      "51",
+      "lich",
+      "wuyao"
+    ]
+  },
+  "32": {
+    "chinese_name": "力丸",
+    "aliases": [
+      "sa",
+      "隐刺",
+      "liwan",
+      "yinci",
+      "yinxingcike"
+    ]
+  },
+  "33": {
+    "chinese_name": "谜团",
+    "aliases": [
+      "mituan"
+    ]
+  },
+  "34": {
+    "chinese_name": "修补匠",
+    "aliases": [
+      "tk",
+      "修补",
+      "xiubujiang"
+    ]
+  },
+  "35": {
+    "chinese_name": "狙击手",
+    "aliases": [
+      "火枪",
+      "矮子",
+      "huoqiang",
+      "jujishou"
+    ]
+  },
+  "36": {
+    "chinese_name": "瘟疫法师",
+    "aliases": [
+      "nec",
+      "死灵法",
+      "wenyifashi"
+    ]
+  },
+  "37": {
+    "chinese_name": "术士",
+    "aliases": [
+      "wl",
+      "shushi",
+      "diyuhuo"
+    ]
+  },
+  "38": {
+    "chinese_name": "兽王",
+    "aliases": [
+      "bm",
+      "leikesa",
+      "shouwang"
+    ]
+  },
+  "39": {
+    "chinese_name": "痛苦女王",
+    "aliases": [
+      "女王",
+      "qop",
+      "tongkunvwang"
+    ]
+  },
+  "40": {
+    "chinese_name": "剧毒术士",
+    "aliases": [
+      "剧毒",
+      "cishe",
+      "bitichong",
+      "judushushi"
+    ]
+  },
+  "41": {
+    "chinese_name": "虚空假面",
+    "aliases": [
+      "fv",
+      "jb",
+      "虚空",
+      "jblian",
+      "xukongjiamian"
+    ]
+  },
+  "42": {
+    "chinese_name": "冥魂大帝",
+    "aliases": [
+      "wk",
+      "snk",
+      "骷髅王",
+      "kulouwang",
+      "minghundad"
+    ]
+  },
+  "43": {
+    "chinese_name": "死亡先知",
+    "aliases": [
+      "dp",
+      "siwangxianzhi"
+    ]
+  },
+  "44": {
+    "chinese_name": "幻影刺客",
+    "aliases": [
+      "pa",
+      "幻刺",
+      "huanci",
+      "mocuidi",
+      "huanyingcike"
+    ]
+  },
+  "45": {
+    "chinese_name": "帕格纳",
+    "aliases": [
+      "骨法",
+      "gufa",
+      "pagena",
+      "yanmie"
+    ]
+  },
+  "46": {
+    "chinese_name": "圣堂刺客",
+    "aliases": [
+      "ta",
+      "圣堂",
+      "lanaya",
+      "shengtangcike"
+    ]
+  },
+  "47": {
+    "chinese_name": "冥界亚龙",
+    "aliases": [
+      "毒龙",
+      "vip",
+      "fushe",
+      "dulong",
+      "mingjieyalong"
+    ]
+  },
+  "48": {
+    "chinese_name": "露娜",
+    "aliases": [
+      "月骑",
+      "luna",
+      "yueqi"
+    ]
+  },
+  "49": {
+    "chinese_name": "龙骑士",
+    "aliases": [
+      "dk",
+      "龙骑",
+      "daweian",
+      "longqishi"
+    ]
+  },
+  "50": {
+    "chinese_name": "戴泽",
+    "aliases": [
+      "am",
+      "sp",
+      "暗牧",
+      "anmu",
+      "daize",
+      "anyingmushi"
+    ]
+  },
+  "51": {
+    "chinese_name": "发条技师",
+    "aliases": [
+      "发条",
+      "clock",
+      "fatiao",
+      "fatiaojishi"
+    ]
+  },
+  "52": {
+    "chinese_name": "拉席克",
+    "aliases": [
+      "ts",
+      "老鹿",
+      "laolu",
+      "laxike",
+      "guanglu"
+    ]
+  },
+  "53": {
+    "chinese_name": "自然先知",
+    "aliases": [
+      "np",
+      "先知",
+      "nsp",
+      "xianzhi",
+      "ziranxianzhi"
+    ]
+  },
+  "54": {
+    "chinese_name": "噬魂鬼",
+    "aliases": [
+      "ls",
+      "小狗",
+      "xiaogou",
+      "shihungui"
+    ]
+  },
+  "55": {
+    "chinese_name": "黑暗贤者",
+    "aliases": [
+      "ds",
+      "兔子",
+      "heianxianzhe"
+    ]
+  },
+  "56": {
+    "chinese_name": "克林克兹",
+    "aliases": [
+      "骨弓",
+      "小骷髅",
+      "kulou",
+      "clinkz",
+      "gugong",
+      "kelinkezi"
+    ]
+  },
+  "57": {
+    "chinese_name": "全能骑士",
+    "aliases": [
+      "ok",
+      "全能",
+      "omni",
+      "naiba",
+      "quannengqishi"
+    ]
+  },
+  "58": {
+    "chinese_name": "魅惑魔女",
+    "aliases": [
+      "en",
+      "小鹿",
+      "xiaolu",
+      "meihuomonv"
+    ]
+  },
+  "59": {
+    "chinese_name": "哈斯卡",
+    "aliases": [
+      "sw",
+      "神灵",
+      "hasika",
+      "shenlingwushi"
+    ]
+  },
+  "60": {
+    "chinese_name": "暗夜魔王",
+    "aliases": [
+      "ns",
+      "夜魔",
+      "yemo",
+      "balana",
+      "anyemowang"
+    ]
+  },
+  "61": {
+    "chinese_name": "育母蜘蛛",
+    "aliases": [
+      "bm",
+      "蜘蛛",
+      "zhizhu",
+      "yumuzhizhu"
+    ]
+  },
+  "62": {
+    "chinese_name": "赏金猎人",
+    "aliases": [
+      "bh",
+      "赏金",
+      "shangjin",
+      "shangjinlieren"
+    ]
+  },
+  "63": {
+    "chinese_name": "编织者",
+    "aliases": [
+      "nw",
+      "蚂蚁",
+      "mayi",
+      "bianzhizhe"
+    ]
+  },
+  "64": {
+    "chinese_name": "杰奇洛",
+    "aliases": [
+      "thd",
+      "双头龙",
+      "jieqiluo",
+      "shuangtuolong"
+    ]
+  },
+  "65": {
+    "chinese_name": "蝙蝠骑士",
+    "aliases": [
+      "br",
+      "蝙蝠",
+      "bianfu",
+      "bianfuqishi"
+    ]
+  },
+  "66": {
+    "chinese_name": "陈",
+    "aliases": [
+      "chen",
+      "shengqishi"
+    ]
+  },
+  "67": {
+    "chinese_name": "幽鬼",
+    "aliases": [
+      "spe",
+      "yougui"
+    ]
+  },
+  "68": {
+    "chinese_name": "远古冰魄",
+    "aliases": [
+      "aa",
+      "冰魂",
+      "binggun",
+      "binghun",
+      "yuangubingpo"
+    ]
+  },
+  "69": {
+    "chinese_name": "末日使者",
+    "aliases": [
+      "末日",
+      "doom",
+      "mori",
+      "morishizhe"
+    ]
+  },
+  "70": {
+    "chinese_name": "熊战士",
+    "aliases": [
+      "拍拍",
+      "拍拍熊",
+      "paipai",
+      "maomaoxiong",
+      "xiongzhanshi"
+    ]
+  },
+  "71": {
+    "chinese_name": "裂魂人",
+    "aliases": [
+      "sb",
+      "白牛",
+      "bainiu",
+      "liehunren"
+    ]
+  },
+  "72": {
+    "chinese_name": "矮人直升机",
+    "aliases": [
+      "飞机",
+      "feiji",
+      "airenzhishengji"
+    ]
+  },
+  "73": {
+    "chinese_name": "炼金术士",
+    "aliases": [
+      "炼金",
+      "lianjin",
+      "lianjinshushi"
+    ]
+  },
+  "74": {
+    "chinese_name": "祈求者",
+    "aliases": [
+      "卡尔",
+      "kaer",
+      "qiqiuzhe"
+    ]
+  },
+  "75": {
+    "chinese_name": "沉默术士",
+    "aliases": [
+      "沉默",
+      "sil",
+      "chenmo",
+      "silencer",
+      "chenmoshushi"
+    ]
+  },
+  "76": {
+    "chinese_name": "殁境神蚀者",
+    "aliases": [
+      "od",
+      "黑鸟",
+      "mojing",
+      "heiniao",
+      "huimiezhe"
+    ]
+  },
+  "77": {
+    "chinese_name": "狼人",
+    "aliases": [
+      "lyc",
+      "langren"
+    ]
+  },
+  "78": {
+    "chinese_name": "酒仙",
+    "aliases": [
+      "熊猫",
+      "jiuxian",
+      "manjikesi"
+    ]
+  },
+  "79": {
+    "chinese_name": "暗影恶魔",
+    "aliases": [
+      "sd",
+      "毒狗",
+      "dugou",
+      "anyingemo"
+    ]
+  },
+  "80": {
+    "chinese_name": "独行德鲁伊",
+    "aliases": [
+      "ld",
+      "熊德",
+      "德鲁伊",
+      "xila",
+      "deluyi",
+      "duxingdeluyi"
+    ]
+  },
+  "81": {
+    "chinese_name": "混沌骑士",
+    "aliases": [
+      "ck",
+      "混沌",
+      "hundun",
+      "hundunqishi"
+    ]
+  },
+  "82": {
+    "chinese_name": "米波",
+    "aliases": [
+      "地卜",
+      "mibo",
+      "goutou",
+      "dibushi"
+    ]
+  },
+  "83": {
+    "chinese_name": "树精卫士",
+    "aliases": [
+      "tp",
+      "大树",
+      "dashu",
+      "shujing",
+      "shujingweishi"
+    ]
+  },
+  "84": {
+    "chinese_name": "食人魔魔法师",
+    "aliases": [
+      "om",
+      "蓝胖",
+      "lanpang",
+      "shirenmo",
+      "shirenmomofashi"
+    ]
+  },
+  "85": {
+    "chinese_name": "不朽尸王",
+    "aliases": [
+      "ud",
+      "尸王",
+      "shiwang",
+      "buxiushiwang"
+    ]
+  },
+  "86": {
+    "chinese_name": "拉比克",
+    "aliases": [
+      "labike",
+      "damodaoshi"
+    ]
+  },
+  "87": {
+    "chinese_name": "干扰者",
+    "aliases": [
+      "萨尔",
+      "saer",
+      "ganraozhe"
+    ]
+  },
+  "88": {
+    "chinese_name": "司夜刺客",
+    "aliases": [
+      "na",
+      "小强",
+      "siyecike",
+      "xiaoqiang"
+    ]
+  },
+  "89": {
+    "chinese_name": "娜迦海妖",
+    "aliases": [
+      "ns",
+      "娜迦",
+      "小娜迦",
+      "naga",
+      "xiaonajia",
+      "najiahaiyao"
+    ]
+  },
+  "90": {
+    "chinese_name": "光之守卫",
+    "aliases": [
+      "光法",
+      "kotl",
+      "guangfa",
+      "guangzhishouwei"
+    ]
+  },
+  "91": {
+    "chinese_name": "艾欧",
+    "aliases": [
+      "io",
+      "小精灵",
+      "aiou",
+      "jingling",
+      "xiaojingling",
+      "jinglingshouwei"
+    ]
+  },
+  "92": {
+    "chinese_name": "维萨吉",
+    "aliases": [
+      "vis",
+      "死灵龙",
+      "weisaji",
+      "silinglong",
+      "silingfeilong"
+    ]
+  },
+  "93": {
+    "chinese_name": "斯拉克",
+    "aliases": [
+      "小鱼",
+      "小鱼人",
+      "slark",
+      "yuren",
+      "silake",
+      "xiaoyuren"
+    ]
+  },
+  "94": {
+    "chinese_name": "美杜莎",
+    "aliases": [
+      "一姐",
+      "danajia",
+      "meidusha",
+      "shefanvyao"
+    ]
+  },
+  "95": {
+    "chinese_name": "巨魔战将",
+    "aliases": [
+      "tw",
+      "巨魔",
+      "jumo",
+      "jumozhanjiang"
+    ]
+  },
+  "96": {
+    "chinese_name": "半人马战行者",
+    "aliases": [
+      "cw",
+      "人马",
+      "centaur",
+      "banrenma",
+      "zhanxingzhe"
+    ]
+  },
+  "97": {
+    "chinese_name": "马格纳斯",
+    "aliases": [
+      "猛犸",
+      "magnus",
+      "mengma",
+      "magenasi"
+    ]
+  },
+  "98": {
+    "chinese_name": "伐木机",
+    "aliases": [
+      "famuji",
+      "huamuji",
+      "siliezhe"
+    ]
+  },
+  "99": {
+    "chinese_name": "钢背兽",
+    "aliases": [
+      "bb",
+      "刚背",
+      "bbzhu",
+      "gangbeishou"
+    ]
+  },
+  "100": {
+    "chinese_name": "巨牙海民",
+    "aliases": [
+      "海民",
+      "juya",
+      "tusk",
+      "ymir",
+      "haimin",
+      "juyahaimin"
+    ]
+  },
+  "101": {
+    "chinese_name": "天怒法师",
+    "aliases": [
+      "sm",
+      "天怒",
+      "tiannu",
+      "longying",
+      "tiannufashi"
+    ]
+  },
+  "102": {
+    "chinese_name": "亚巴顿",
+    "aliases": [
+      "loa",
+      "yabadun",
+      "diyulingzhu",
+      "moailingzhu"
+    ]
+  },
+  "103": {
+    "chinese_name": "上古巨神",
+    "aliases": [
+      "et",
+      "tc",
+      "大牛",
+      "daniu",
+      "shanggujusen"
+    ]
+  },
+  "104": {
+    "chinese_name": "军团指挥官",
+    "aliases": [
+      "lc",
+      "军团",
+      "tesiding",
+      "teleisiting",
+      "juntuanzhihuiguan"
+    ]
+  },
+  "105": {
+    "chinese_name": "工程师",
+    "aliases": [
+      "炸弹",
+      "炸弹人",
+      "ladeng",
+      "techies",
+      "zhadanren",
+      "gongchengshi"
+    ]
+  },
+  "106": {
+    "chinese_name": "灰烬之灵",
+    "aliases": [
+      "es",
+      "火猫",
+      "xin",
+      "huomao",
+      "chengyu",
+      "huijinzhiling"
+    ]
+  },
+  "107": {
+    "chinese_name": "大地之灵",
+    "aliases": [
+      "es",
+      "土猫",
+      "tumao",
+      "dadizhiling"
+    ]
+  },
+  "108": {
+    "chinese_name": "孽主",
+    "aliases": [
+      "pl",
+      "大屁股",
+      "dapigu",
+      "niezhu",
+      "shenyuanlingzhu"
+    ]
+  },
+  "109": {
+    "chinese_name": "恐怖利刃",
+    "aliases": [
+      "tb",
+      "yilidan",
+      "kongbuliren",
+      "linghunshouwei"
+    ]
+  },
+  "110": {
+    "chinese_name": "凤凰",
+    "aliases": [
+      "phoenix",
+      "fenghuang"
+    ]
+  },
+  "111": {
+    "chinese_name": "神谕者",
+    "aliases": [
+      "神谕",
+      "oracle",
+      "shenyu",
+      "shenyuzhe"
+    ]
+  },
+  "112": {
+    "chinese_name": "寒冬飞龙",
+    "aliases": [
+      "ww",
+      "冰龙",
+      "binglong",
+      "handongfeilong"
+    ]
+  },
+  "113": {
+    "chinese_name": "天穹守望者",
+    "aliases": [
+      "aw",
+      "电狗",
+      "arc",
+      "zete",
+      "benzun",
+      "diangou",
+      "tianqiongshouwangzhe"
+    ]
+  },
+  "114": {
+    "chinese_name": "齐天大圣",
+    "aliases": [
+      "mk",
+      "大圣",
+      "houzi",
+      "sunwukong",
+      "qitiandasheng"
+    ]
+  },
+  "119": {
+    "chinese_name": "邪影芳灵",
+    "aliases": [
+      "dw",
+      "小仙女",
+      "花仙子",
+      "miruisijia",
+      "xiaoxiannv",
+      "xieyingfangling"
+    ]
+  },
+  "120": {
+    "chinese_name": "石鳞剑士",
+    "aliases": [
+      "滚滚",
+      "穿山甲",
+      "gungun",
+      "tangte",
+      "shilinjianshi"
+    ]
+  },
+  "121": {
+    "chinese_name": "天涯墨客",
+    "aliases": [
+      "墨客",
+      "moke",
+      "tianyamoke"
+    ]
+  },
+  "123": {
+    "chinese_name": "森海飞霞",
+    "aliases": [
+      "hw",
+      "松鼠",
+      "songshu",
+      "senhaifeixia"
+    ]
+  },
+  "126": {
+    "chinese_name": "虚无之灵",
+    "aliases": [
+      "vs",
+      "紫猫",
+      "void",
+      "zimao",
+      "xuwuzhiling"
+    ]
+  },
+  "128": {
+    "chinese_name": "电炎绝手",
+    "aliases": [
+      "奶奶",
+      "老奶奶",
+      "laopopo",
+      "laonainai",
+      "dianyanjueshou"
+    ]
+  },
+  "129": {
+    "chinese_name": "玛尔斯",
+    "aliases": [
+      "马尔斯",
+      "mars",
+      "maersi",
+      "zhanshen"
+    ]
+  },
+  "131": {
+    "chinese_name": "百戏大王",
+    "aliases": [
+      "rm",
+      "baixi",
+      "xiaochou",
+      "baixidawang"
+    ]
+  },
+  "135": {
+    "chinese_name": "破晓辰星",
+    "aliases": [
+      "破晓",
+      "锤妹",
+      "weluola",
+      "poxiaochenxing"
+    ]
+  },
+  "136": {
+    "chinese_name": "玛西",
+    "aliases": [
+      "maxi",
+      "marci"
+    ]
+  },
+  "137": {
+    "chinese_name": "獸",
+    "aliases": [
+      "兽",
+      "pb",
+      "原始兽",
+      "shou",
+      "primal"
+    ]
+  },
+  "138": {
+    "chinese_name": "琼英碧灵",
+    "aliases": [
+      "穆尔塔",
+      "nailv",
+      "qiongyingbiling"
+    ]
+  },
+  "145": {
+    "chinese_name": "凯",
+    "aliases": [
+      "kai",
+      "鸟武士",
+      "niaowushi"
+    ]
+  },
+  "155": {
+    "chinese_name": "朗戈",
+    "aliases": [
+      "蛤蟆",
+      "青蛙",
+      "hama",
+      "langge",
+      "qingwa"
+    ]
+  }
+}
