@@ -27,6 +27,13 @@ data/game_hero_images/panorama/images/heroes/large/
 data/game_hero_images/panorama/images/heroes/selection/
 data/game_hero_images/panorama/images/heroes/*.png
 !data/game_hero_images/panorama/images/heroes/npc_dota_hero_*.png
+data/game_hero_images/panorama/images/heroes/npc_dota_hero_allied_coach_psd.png
+data/game_hero_images/panorama/images/heroes/npc_dota_hero_creep_*.png
+data/game_hero_images/panorama/images/heroes/npc_dota_hero_default.png
+data/game_hero_images/panorama/images/heroes/npc_dota_hero_enemy_coach_psd.png
+data/game_hero_images/panorama/images/heroes/npc_dota_hero_roshan.png
+data/game_hero_images/panorama/images/heroes/npc_dota_hero_spirit_bear.png
+data/game_hero_images/panorama/images/heroes/npc_dota_hero_tower_*.png
 
 # Research history that is not part of the shipped model set
 artifacts/archive/

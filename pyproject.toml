@@ -10,5 +10,9 @@ dependencies = ["numpy>=2.0", "Pillow>=10.0"]
 [project.optional-dependencies]
 build = ["PyInstaller>=6.0"]
 
+[tool.setuptools]
+packages = ["d2draft"]
+py-modules = ["dota2_bp_helper"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
