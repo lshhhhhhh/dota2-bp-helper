@@ -132,6 +132,39 @@ class DesktopUiTest(unittest.TestCase):
         picked = [hero for hero in self.app.team_ids["radiant"] if hero]
         self.assertEqual(picked, [self.app.catalog.resolve("Juggernaut")])
 
+    def test_enter_takes_the_top_suggestion_without_arrowing_first(self) -> None:
+        # A partial name is what actually gets typed. Falling through to the raw
+        # text made resolve() reject it and the app reported an unknown hero.
+        combo = self._combo("radiant")
+        self.app.input_vars["radiant"].set("jug")
+        self.app._update_suggestions("radiant", combo, "g")
+        self.root.update()
+        self.app._accept_suggestion("radiant", combo)
+        self.root.update()
+        picked = [hero for hero in self.app.team_ids["radiant"] if hero]
+        self.assertEqual(picked, [self.app.catalog.resolve("Juggernaut")])
+        self.assertEqual(self.app.input_vars["radiant"].get(), "")
+
+    def test_enter_prefers_an_exact_name_over_other_matches(self) -> None:
+        combo = self._combo("dire")
+        self.app.input_vars["dire"].set("Lion")
+        self.app._update_suggestions("dire", combo, "n")
+        self.root.update()
+        self.app._accept_suggestion("dire", combo)
+        self.root.update()
+        picked = [hero for hero in self.app.team_ids["dire"] if hero]
+        self.assertEqual(picked, [self.app.catalog.resolve("Lion")])
+
+    def test_enter_with_no_suggestions_still_resolves_a_full_name(self) -> None:
+        combo = self._combo("radiant")
+        self.app.input_vars["radiant"].set("Axe")
+        self.app._update_suggestions("radiant", combo, "e")
+        self.root.update()
+        self.app._accept_suggestion("radiant", combo)
+        self.root.update()
+        picked = [hero for hero in self.app.team_ids["radiant"] if hero]
+        self.assertEqual(picked, [self.app.catalog.resolve("Axe")])
+
     def test_an_empty_query_closes_the_suggestion_list(self) -> None:
         combo = self._combo("radiant")
         self.app.input_vars["radiant"].set("jug")

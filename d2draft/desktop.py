@@ -1271,8 +1271,13 @@ class DraftDesktopApp:
         if window is not None and window.winfo_exists() and window.winfo_viewable():
             listbox = self._suggestion_lists[side]
             selected = listbox.curselection()
-            if selected:
-                self.input_vars[side].set(listbox.get(selected[0]))
+            # Enter with nothing highlighted takes the top suggestion. Falling
+            # through to the raw text instead rejected every partial name, which
+            # is most of what gets typed. Search already ranks an exact match
+            # first, so a fully typed name still wins.
+            index = selected[0] if selected else (0 if listbox.size() else None)
+            if index is not None:
+                self.input_vars[side].set(listbox.get(index))
         self._hide_suggestions(side)
         combo.focus_set()
         self.add_from_input(side)
