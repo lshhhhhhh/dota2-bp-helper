@@ -21,6 +21,13 @@ data/screen_config.json
 screenshot/
 tools/vrf/
 
+# Only the root hero templates used by the matcher are versioned.
+data/game_hero_images/panorama/images/heroes/icons/
+data/game_hero_images/panorama/images/heroes/large/
+data/game_hero_images/panorama/images/heroes/selection/
+data/game_hero_images/panorama/images/heroes/*.png
+!data/game_hero_images/panorama/images/heroes/npc_dota_hero_*.png
+
 # Research history that is not part of the shipped model set
 artifacts/archive/
 artifacts/candidates/

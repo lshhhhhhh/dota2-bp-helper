@@ -20,7 +20,12 @@ $pythonCommand = Get-Command python -ErrorAction SilentlyContinue
 if ($pythonCommand) {
     $python = $pythonCommand.Source
 } else {
-    throw "Python 3.11+ was not found. Install Python and run: python -m pip install -e ."
+    $codexPython = Join-Path $env:USERPROFILE ".cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+    if (Test-Path -LiteralPath $codexPython) {
+        $python = $codexPython
+    } else {
+        throw "Python 3.11+ was not found. Install Python and run: python -m pip install -e ."
+    }
 }
 
 Set-Location $projectRoot
