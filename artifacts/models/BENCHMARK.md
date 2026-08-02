@@ -102,12 +102,125 @@ Outcome 模型的推荐实质上是一张静态梯度榜。Policy 是真正随�
 Outcome 领先 1.3 点），原因是该分段玩家很少选静态榜推荐的英雄（H@5 仅 0.049），
 命中率过低把差值压向了零 —— 那反映的是推荐与玩家行为的重合度，不是排序质量。
 
+### 为什么不用准确率
+
+`outcome_benchmark.json` 里仍然输出 `accuracy`，但它**不是主指标**，也不能拿去
+和别的论文比。三个原因：
+
+1. **阈值是拍脑袋的，而且影响结果。**把判定阈值从 0.48 扫到 0.52，全段位模型的
+   准确率在 0.5474～0.5506 之间摆动，最优点落在 0.510 而不是 0.500。这个指标超出
+   随机的总信号只有 5 个点，其中约 6% 是阈值造成的。
+2. **它丢掉概率。**预测 0.99 和预测 0.51 都算「预测赢」。22.6% 的预测挤在
+   0.48~0.52 区间内，对这些样本 ACC 把一次抛硬币记成一次明确判断。
+3. **地板随数据集变。**我们每场比赛同时贡献一个赢的决策和一个输的决策，所以基准
+   恰好是 0.5000；而 DraftRec 的 Dota2 数据里天辉胜率 51.8%，无脑猜天辉就有
+   0.5180。拿他们的 0.5750 和我们的 0.5504 直接比是错的，扣掉各自地板后是
+   +5.7 点对 +5.0 点。
+
+Bootstrap 也显示，相对于超出随机的那部分信号，准确率的波动（0.084）大于
+AUC（0.070）。判别力看 AUC，概率可信度看 LogLoss 和校准误差，排序看
+`ranking_benchmark.json`。
+
+### 有效样本量是比赛数，不是样本数
+
+每场比赛的第三轮产生**一对镜像样本**：同一个 4v4 从双方视角各看一次，标签相反。
+所以 13,304 个第三轮样本的有效样本量接近 6,652 场，而不是 13,304。
+
+`same_state_pairwise` 和 `outcome_split_hit` 已经按比赛配对统计。但
+`binary_metrics` 把样本当独立处理 —— 目前没有对 AUC 或准确率发布置信区间，所以
+没有错误；**如果以后要加，必须按比赛而不是按样本计算**，否则区间会偏窄。
+
 ### 离线策略评估当前不可用
 
 `off_policy_value` 使用 Policy 作为倾向性模型做自归一化 IPS。当前三套模型上它
 都被标记为 `usable: false`：有效样本量只有 19%～21%，且把目标策略换成均匀分布
 后估计值只变化 0.006～0.007，说明数字由 `1/μ` 分母主导，与被评估的模型无关。
 在 Policy 的 Hit@1 提高之前，不要引用这个估计值。
+
+## 已经测过并排除的方向
+
+以下三个方向都曾看起来有希望，都在测量后被放弃。记录在这里是为了让后来者能
+**复核数字，而不是把这些路再走一遍**。三个检查都可以重跑（需要私有采集数据库）：
+
+```powershell
+python -m d2draft.negative_results --check interactions
+python -m d2draft.negative_results --check composition
+python -m d2draft.negative_results --check margin-targets
+```
+
+### 1. 配合与克制的交互建模
+
+模型里的 synergy/counter 嵌入学到的值，跨候选标准差只有 0.0021，而每英雄固定偏置
+是 0.0892 —— **比值 0.024**。5000 个随机局面里只有 6 个英雄能进过 top-5，固定排名
+20 名开外的英雄最好只能爬到第 16 名。排序相对静态梯度榜的增量是 +0.16 / +0.03 /
++0.06 点，全在置信区间内。
+
+数据量差多少：8,001 个英雄对，平均每对只有 166 次队友同队观测，这个样本量只能
+检出 15.4 个百分点的胜率差，而真实配合效应大约 2~5 个点。要检出 2 个点需要约
+390 万场，我们有 6.6 万场。
+
+文献同向：DraftRec（WWW 2022）在 5 万场 Dota 2 上比较逻辑回归、因子分解机、
+图神经网络和显式配合建模，所有方法都在逻辑回归的 ±0.4% 内。JueWuDraft 显示
+交互建模在 **AI 自对弈**数据上把 AUC 从 0.771 拉到 0.908，但在人类数据上只有
+0.642 → 0.694 —— 人类阵容是自我平衡的，交互信号被玩家自己抹掉了。
+
+### 2. 位置与阵容结构检查
+
+从 35,503 场按队内经济排序推出实际位置。**英雄不是位置固定的**：位置分布熵中位数
+0.811（1.0 = 五个位置均匀），最固定的英雄也只有 0.426。手写位置表在同一个版本内
+就已经是错的，不必等到版本更新。
+
+**畸形阵容不存在**：每队「天然一号位」期望个数均值 1.00、标准差 0.30，5%~95%
+分位 [0.53, 1.51]。数据里没有 5 个大哥的阵容，包括统帅及以下。
+
+**就算到极端也几乎没信号**：按组成分箱的胜率是 0.476 / 0.506 / 0.509 / 0.504 /
+0.504 / 0.476，只有最极端的 10% 两端各掉 3 个点。保留：位置用赛后经济排名代理，
+有噪声；且一号位分布是在同一批比赛上估的。
+
+### 3. 用连续净胜差替代二元胜负作训练目标
+
+同一个自变量（阵容强度差）回归不同目标，n=35,503：
+
+| 训练目标 | t | R² | 相对效率 |
+| --- | ---: | ---: | ---: |
+| 二元胜负（在用） | 25.71 | 0.01827 | 1.00x |
+| 击杀差 | 24.62 | 0.01679 | 0.96x |
+| 兵营差 | 24.39 | 0.01648 | 0.95x |
+| 防御塔差 | 24.13 | 0.01613 | 0.94x |
+| 净资产差 | 12.71 | 0.00453 | 0.49x |
+| 净资产差/分钟 | 8.33 | 0.00195 | 0.32x |
+
+**每个连续目标都比二元胜负差。**净胜差的额外方差来自双方水平差和比赛长度，
+不是阵容 —— 加进去等于往目标里掺噪声。「一场比赛只有 1 个 bit 太少」这个假设
+是错的：那 1 个 bit 是这批数据里最干净的信号。
+
+顺带得到一个上限数字：**阵容强度差只能解释比赛结果 1.8% 的方差**（R²=0.018，
+n=35,503，t=25.7 高度显著）。这是这个问题本身的性质，不是模型的缺陷。
+
+### 逻辑回归与神经网络等价
+
+在同一套划分上训练一个纯逻辑回归（每英雄一个队友系数、一个敌方系数、一个候选
+系数，共 384 个参数）与当前神经网络（约 8,385 个参数）对比：
+
+| 模型 | 参数 | 第3轮 AUC | LogLoss | 校准误差 | 同状态配对 | 命中差 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 神经网络（当前） | 8,385 | 0.5694 | 0.6860 | 0.0071 | 0.5386 | 2.74 点 |
+| 逻辑回归 | 384 | 0.5679 | 0.6864 | 0.0079 | 0.5356 | 3.19 点 |
+| 静态强度榜 | 127 | 0.5259 | 5.0356 | 0.4766 | 0.5370 | 2.78 点 |
+
+22 倍更少的参数，每项都在噪声内打平，训练耗时 14 秒。注意第三行：静态梯度榜
+**排序一样好但概率完全没校准**（LogLoss 5.04、校准误差 0.477），所以不能直接用
+梯度榜代替 —— 阵容评估功能依赖校准过的概率。逻辑回归等于一张校准过的梯度榜。
+
+保留：这个逻辑回归是在临时脚本里训的，只试了一组 L2，没调参，只跑了全段位。
+真要替换必须先在验证集上调参并在三个分段上验证。
+
+### 已明确排除的产品方向
+
+玩家熟练度与账号历史是文献里唯一被验证有效的额外信号（DraftRec 在 LoL 上把
+准确率从 0.5255 提到 0.5535，其中绝大部分来自玩家历史而非英雄交互）。**用户已
+明确决定不做**：需要绑定 Steam 账号，产品复杂度过高，而且玩家会自己跳过不会玩
+的英雄。不要重提。
 
 ---
 
@@ -234,6 +347,39 @@ bracket rarely take the static list's heroes at all (H@5 of 0.049), and a hit ra
 that low compresses the gap toward zero. That reflects overlap with player
 behaviour, not ranking quality.
 
+### Why accuracy is not used
+
+`outcome_benchmark.json` still emits `accuracy`, but it is **not a headline metric**
+and it cannot be compared against other papers. Three reasons:
+
+1. **The threshold is arbitrary and it moves the result.** Sweeping the decision
+   threshold from 0.48 to 0.52 moves the all-ranks model between 0.5474 and 0.5506,
+   with the optimum at 0.510 rather than 0.500. The metric's entire signal above
+   chance is 5 points, so roughly 6% of the score is a threshold artefact.
+2. **It discards the probability.** A prediction of 0.99 and one of 0.51 both count
+   as "predicts a win". 22.6% of predictions sit inside 0.48–0.52, where accuracy
+   records a coin flip as a confident call.
+3. **The floor changes with the dataset.** Every match here contributes one winning
+   and one losing decision, so our base rate is exactly 0.5000. DraftRec's Dota2 set
+   has a 51.8% Radiant win rate, so always guessing Radiant scores 0.5180. Comparing
+   their 0.5750 with our 0.5504 directly is wrong; net of each floor it is +5.7
+   points against +5.0.
+
+Bootstrapping also shows accuracy is noisier than AUC relative to the signal above
+chance (0.084 against 0.070). Use AUC for discrimination, log loss and calibration
+error for probability quality, and `ranking_benchmark.json` for the ranking.
+
+### Effective sample size is matches, not examples
+
+Each match produces a **mirrored pair** of round-3 examples: the same 4v4 seen from
+both sides, with opposite labels. The effective sample size behind 13,304 round-3
+examples is therefore closer to 6,652 matches.
+
+`same_state_pairwise` and `outcome_split_hit` already pair by match. `binary_metrics`
+treats examples as independent — nothing published today is wrong, because no
+confidence interval is reported for AUC or accuracy, but **if one is ever added it
+must be computed across matches**, or it will be too narrow.
+
 ### Off-policy evaluation is currently unusable
 
 `off_policy_value` runs self-normalised IPS with Policy as the propensity model.
@@ -241,3 +387,108 @@ It is currently marked `usable: false` for all three models: effective sample si
 is only 19–21%, and swapping the target for a uniform policy moves the estimate by
 0.006–0.007, showing the number is driven by the `1/mu` denominator rather than by
 the model under evaluation. Do not quote it until Policy's Hit@1 improves.
+
+## Directions that were measured and ruled out
+
+Three directions looked promising and were each abandoned after measurement. They
+are recorded here so a future maintainer can **check the numbers instead of redoing
+the work**. All three checks re-run against the private collection database:
+
+```powershell
+python -m d2draft.negative_results --check interactions
+python -m d2draft.negative_results --check composition
+python -m d2draft.negative_results --check margin-targets
+```
+
+### 1. Modelling synergy and counter interactions
+
+The synergy and counter embeddings do learn non-zero values, but their spread across
+candidates is 0.0021 against 0.0892 for the fixed per-hero bias — a **ratio of
+0.024**. Across 5,000 random states only 6 heroes ever reach the top 5, and a hero
+ranked 20th or worse on the fixed order can never climb above 16th. The ranking gain
+over a static tier list is +0.16, +0.03, and +0.06 points, all inside the confidence
+intervals.
+
+The data is far short of what pairwise effects need: 8,001 hero pairs with an average
+of 166 same-team observations each, which can only detect a 15.4 point win-rate gap,
+while real synergies are perhaps 2–5 points. Detecting 2 points would take roughly
+3.9 million matches against the 66,515 available.
+
+The literature agrees. DraftRec (WWW 2022) compared logistic regression,
+factorisation machines, graph neural networks, and explicit synergy modelling on
+50,000 Dota 2 matches and every method landed within ±0.4% of logistic regression.
+JueWuDraft shows interaction modelling lifting AUC from 0.771 to 0.908 on **AI
+self-play** data but only 0.642 to 0.694 on human data: human lineups are
+self-balancing, so players erase the interaction signal themselves.
+
+### 2. Role and lineup-composition checks
+
+Positions were derived from 35,503 matches by ranking net worth within each team.
+**Heroes are not locked to positions**: median position entropy is 0.811 where 1.0
+is uniform across all five, and even the most fixed hero sits at 0.426. A
+hand-authored role table is already wrong inside a single patch, never mind after
+one.
+
+**Unbalanced lineups do not occur**: the expected number of natural position-1
+heroes per team has mean 1.00 and standard deviation 0.30, 5th to 95th percentile
+[0.53, 1.51]. There are no five-carry drafts in the data, including in the
+archon-and-below bracket.
+
+**Even the extremes carry almost nothing**: win rate by composition bin runs 0.476,
+0.506, 0.509, 0.504, 0.504, 0.476, so only the outer 10% on each side loses about 3
+points. Caveats: position is proxied by end-of-game net worth rank, which is noisy,
+and the position-1 distribution is estimated on the same matches.
+
+### 3. Replacing the binary label with a continuous victory margin
+
+The same predictor (draft strength difference) regressed on different targets,
+n=35,503:
+
+| Training target | t | R² | Relative efficiency |
+| --- | ---: | ---: | ---: |
+| Binary win/loss (in use) | 25.71 | 0.01827 | 1.00x |
+| Kill difference | 24.62 | 0.01679 | 0.96x |
+| Barracks difference | 24.39 | 0.01648 | 0.95x |
+| Tower difference | 24.13 | 0.01613 | 0.94x |
+| Net worth difference | 12.71 | 0.00453 | 0.49x |
+| Net worth per minute | 8.33 | 0.00195 | 0.32x |
+
+**Every continuous target is worse than the binary label.** The extra variance in a
+margin comes from the skill gap between the teams and from match length, not from
+the draft, so adding it dilutes the signal. The premise that "one bit per match is
+too little" is wrong: that bit is the cleanest signal this data has.
+
+This also produces a ceiling worth remembering: **the draft strength difference
+explains about 1.8% of outcome variance** (R²=0.018, n=35,503, t=25.7, highly
+significant). That is a property of the problem, not a defect in the model.
+
+### Logistic regression matches the neural network
+
+A plain logistic regression trained on the same split — one ally coefficient, one
+enemy coefficient, and one candidate coefficient per hero, 384 parameters — against
+the current network at roughly 8,385 parameters:
+
+| Model | Params | Round-3 AUC | LogLoss | Calibration | Same-state pairwise | Hit gap |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Neural network (current) | 8,385 | 0.5694 | 0.6860 | 0.0071 | 0.5386 | 2.74 pts |
+| Logistic regression | 384 | 0.5679 | 0.6864 | 0.0079 | 0.5356 | 3.19 pts |
+| Static hero strength | 127 | 0.5259 | 5.0356 | 0.4766 | 0.5370 | 2.78 pts |
+
+Twenty-two times fewer parameters, every metric tied within noise, 14 seconds to
+train. Note the third row: the static tier list **ranks just as well but its
+probabilities are uncalibrated** (log loss 5.04, calibration error 0.477), so it
+cannot simply replace the model — the lineup evaluation depends on calibrated
+probabilities. Logistic regression is a calibrated tier list.
+
+Caveat: this regression was fitted in a scratch script with a single L2 setting, no
+tuning, and only on the all-ranks bracket. Any real replacement must tune on the
+validation split and verify across all three brackets first.
+
+### A product direction that is explicitly closed
+
+Player proficiency and account history are the only extra signal the literature
+validates — DraftRec lifts League of Legends accuracy from 0.5255 to 0.5535, and
+nearly all of that comes from player history rather than hero interactions. **The
+user has decided against it**: it would require binding a Steam account, which is
+too much product complexity, and players already skip heroes they cannot play. Do
+not raise it again.
