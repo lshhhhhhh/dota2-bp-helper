@@ -31,6 +31,13 @@ from .state import DraftState
 # Phase 1 is inert by construction: with nothing revealed the conditional and the
 # marginal are the same distribution over the same legal heroes, so the term is
 # exactly zero and the ranking falls back to predicted win probability.
+# 0.15 reads small and is not. Hero win probabilities span roughly 0.44 to 0.60, a
+# narrow band in log odds, while pick probabilities span orders of magnitude, so the
+# raw term carries 11.3x the spread of the win-odds term across candidates. After
+# weighting it still carries 1.7x, and the final ranking correlates 0.83 with this
+# term alone against 0.48 with predicted win probability alone. The weight is heavy
+# damping on the louder signal, not a nudge on top of the quieter one -- which is
+# why 0.3 already drops legend-and-above below chance.
 DEFAULT_POLICY_SURPRISE = 0.15
 
 # Superseded by the surprise term above, which measures the same thing
