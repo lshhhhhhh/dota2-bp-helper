@@ -2,17 +2,27 @@ from __future__ import annotations
 
 import argparse
 import json
+import queue
 import sqlite3
+import threading
 import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
+from typing import Callable
 
 from PIL import Image, ImageDraw, ImageGrab, ImageTk
 
+from . import __version__
 from .benchmark import approximate_ab_test_matches
 from .i18n import LANGUAGE_LABELS, rank_label, tr
 from .model_bundle import ModelBundle
+from .model_updates import (
+    ModelUpdateError,
+    ModelUpdater,
+    RemoteModel,
+    merge_bundles,
+)
 from .recommender import HeroCatalog, HeroInfo, HybridRecommender, normalize_hero_name
 from .screen_capture import MonitorInfo, enumerate_monitors, rectangles_intersect
 from .state import DraftState
@@ -38,6 +48,13 @@ DIRE = "#d05252"
 ACCENT = "#d6a756"
 
 
+def _format_utc(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "—"
+    return text[:19].replace("T", " ") + " UTC"
+
+
 class DraftDesktopApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -54,6 +71,7 @@ class DraftDesktopApp:
         self.root.configure(bg=BG)
 
         self.catalog = HeroCatalog(ROOT / "data" / "heroes.json")
+        self.updater = self._create_updater()
         self.model_bundles = self._discover_model_bundles()
         self.model_bundle = next(
             (
@@ -77,6 +95,14 @@ class DraftDesktopApp:
         self.model_patch = self.model_bundle.patch_label
         self.latest_data_patch = self._read_latest_data_patch()
         self._model_window: tk.Toplevel | None = None
+        self._update_text: tk.Text | None = None
+        self._model_combo: ttk.Combobox | None = None
+        self._pending_updates: list[RemoteModel] = []
+        self._update_busy = False
+        self._update_queue: queue.Queue[Callable[[], None]] = queue.Queue()
+        self._update_poller: str | None = None
+        self._update_status_var = tk.StringVar(value="")
+        self.auto_update_var = tk.BooleanVar(value=self._auto_update_enabled())
 
         self.phase_var = tk.StringVar(value=self._t("auto"))
         self.model_choice_var = tk.StringVar(value=self._model_choice_label(self.model_bundle))
@@ -116,6 +142,7 @@ class DraftDesktopApp:
         self._configure_styles()
         self._build_ui()
         self.root.attributes("-topmost", True)
+        self.root.after(1500, self._auto_check_updates)
 
     def _t(self, key: str, **values: object) -> str:
         return tr(self.language, key, **values)
@@ -131,6 +158,14 @@ class DraftDesktopApp:
     def _model_choice_label(self, bundle: ModelBundle) -> str:
         return f"{self._rank_label(bundle)} · Dota {bundle.patch_label}"
 
+    def _create_updater(self) -> ModelUpdater | None:
+        try:
+            return ModelUpdater(
+                hero_ids=self.catalog.by_id, app_version=__version__
+            )
+        except (OSError, ValueError):
+            return None
+
     def _discover_model_bundles(self) -> list[ModelBundle]:
         directories = [MODEL_DIR]
         if MODEL_COLLECTION_DIR.exists():
@@ -138,25 +173,23 @@ class DraftDesktopApp:
                 path.parent
                 for path in sorted(MODEL_COLLECTION_DIR.glob("*/model_manifest.json"))
             )
-        bundles: list[ModelBundle] = []
+        builtin: list[ModelBundle] = []
         seen: set[Path] = set()
         for directory in directories:
             resolved = directory.resolve()
             if resolved in seen:
                 continue
             seen.add(resolved)
-            bundles.append(
+            builtin.append(
                 ModelBundle.load(directory, expected_hero_ids=self.catalog.by_id)
             )
-        priority = {"legend_plus": 0, "archon_below": 1, "all": 2}
-        bundles.sort(
-            key=lambda bundle: (
-                priority.get(bundle.rank_bracket_id, 9),
-                bundle.patch_label,
-                bundle.model_id,
-            )
-        )
-        return bundles
+        installed: list[ModelBundle] = []
+        if self.updater is not None:
+            try:
+                installed = self.updater.installed_bundles()
+            except OSError:
+                installed = []
+        return merge_bundles(builtin, installed)
 
     def _localized_model_choices(self) -> dict[str, ModelBundle]:
         return {self._model_choice_label(bundle): bundle for bundle in self.model_bundles}
@@ -184,7 +217,9 @@ class DraftDesktopApp:
         self.model_header_var.set(self._model_header_text())
         if self._model_window is not None and self._model_window.winfo_exists():
             self._model_window.destroy()
-            self._model_window = None
+        self._model_window = None
+        self._update_text = None
+        self._update_status_var.set("")
         for child in self.root.winfo_children():
             child.destroy()
         self.slot_buttons = {"radiant": [], "dire": []}
@@ -569,6 +604,7 @@ class DraftDesktopApp:
         add_tab(self._t("principle"), self._model_principle_text())
         add_tab(self._t("metrics"), self._model_metrics_text())
         add_tab(self._t("benchmark"), self._model_benchmark_text())
+        self._build_update_tab(notebook)
 
         footer = ttk.Frame(window, padding=(18, 0, 18, 14))
         footer.pack(fill="x")
@@ -582,6 +618,7 @@ class DraftDesktopApp:
             style="Dark.TCombobox",
         )
         model_combo.pack(side="left", padx=(8, 8))
+        self._model_combo = model_combo
 
         def apply_model() -> None:
             self._activate_model(self.model_choice_var.get())
@@ -597,18 +634,74 @@ class DraftDesktopApp:
 
         def close_window() -> None:
             self._model_window = None
+            self._update_text = None
+            self._model_combo = None
             window.destroy()
 
         window.protocol("WM_DELETE_WINDOW", close_window)
 
+    def _build_update_tab(self, notebook: ttk.Notebook) -> None:
+        frame = ttk.Frame(notebook, style="Panel.TFrame", padding=8)
+        body = ttk.Frame(frame, style="Panel.TFrame")
+        body.pack(fill="both", expand=True)
+        text_widget = tk.Text(
+            body,
+            wrap="word",
+            bg=PANEL,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            padx=14,
+            pady=12,
+            font=("Microsoft YaHei UI", 10),
+            spacing1=2,
+            spacing3=4,
+        )
+        scrollbar = ttk.Scrollbar(body, orient="vertical", command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        text_widget.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        self._update_text = text_widget
+
+        actions = ttk.Frame(frame, style="Panel.TFrame", padding=(6, 10, 6, 0))
+        actions.pack(fill="x")
+        ttk.Button(
+            actions,
+            text=self._t("check_updates"),
+            command=lambda: self.check_updates(manual=True),
+        ).pack(side="left")
+        ttk.Button(
+            actions, text=self._t("download_and_use"), command=self.download_updates
+        ).pack(side="left", padx=(8, 0))
+        ttk.Button(
+            actions,
+            text=self._t("restore_previous"),
+            command=self.restore_previous_model,
+        ).pack(side="left", padx=(8, 0))
+        ttk.Checkbutton(
+            actions,
+            text=self._t("auto_update_models"),
+            variable=self.auto_update_var,
+            command=self._toggle_auto_update,
+        ).pack(side="right")
+        ttk.Label(
+            frame, textvariable=self._update_status_var, style="Muted.TLabel"
+        ).pack(fill="x", padx=6, pady=(8, 0))
+
+        notebook.add(frame, text=self._t("updates"))
+        self._refresh_update_tab()
+
     def _activate_model(self, choice: str) -> None:
-        bundle = self.model_choices.get(choice)
+        self._activate_bundle(self.model_choices.get(choice))
+
+    def _activate_bundle(self, bundle: ModelBundle | None) -> None:
         if bundle is None or bundle.model_id == self.model_bundle.model_id:
             return
         self.model_bundle = bundle
         self.model_patch = bundle.patch_label
         self.recommender = HybridRecommender(bundle.artifact_path, self.catalog)
         self.model_header_var.set(self._model_header_text())
+        self.model_choice_var.set(self._model_choice_label(bundle))
         self.status_var.set(
             self._t(
                 "switched_model",
@@ -617,6 +710,319 @@ class DraftDesktopApp:
             )
         )
         self._maybe_recommend()
+
+    def _auto_update_enabled(self) -> bool:
+        if self.updater is None:
+            return False
+        try:
+            return self.updater.load_state().auto_update
+        except OSError:
+            return False
+
+    def _update_error_text(self, error: ModelUpdateError) -> str:
+        return self._t(
+            {
+                "network": "update_check_failed",
+                "index": "update_error_index",
+                "install": "update_error_install",
+            }.get(getattr(error, "kind", "verify"), "update_error_verify")
+        )
+
+    def _current_phase_3_auc(self) -> float | None:
+        try:
+            metrics = self.model_bundle.outcome_benchmark["outcome_prediction_metrics"]
+            return float(metrics["phase_3"]["auc"])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _update_tab_text(self) -> str:
+        bundle = self.model_bundle
+        blocks = [
+            self._t(
+                "update_current",
+                name=self._model_choice_label(bundle),
+                model_id=bundle.model_id,
+                created=_format_utc(bundle.manifest.get("created_at_utc")),
+                patch=bundle.patch_label,
+            )
+        ]
+        if self.updater is None:
+            return "\n\n".join([*blocks, self._t("update_unknown"), self._t("update_safety")])
+
+        state = self.updater.load_state()
+        blocks.append(
+            self._t(
+                "update_source",
+                url=self.updater.index_url,
+                checked=(
+                    time.strftime(
+                        "%Y-%m-%d %H:%M", time.localtime(state.last_checked_at)
+                    )
+                    if state.last_checked_at
+                    else self._t("update_never")
+                ),
+            )
+        )
+        remote = self._pending_updates[0] if self._pending_updates else None
+        if remote is not None:
+            blocks.append(
+                self._t(
+                    "update_available",
+                    name=remote.display_name,
+                    model_id=remote.model_id,
+                    created=_format_utc(remote.created_at_utc),
+                    size=f"{remote.size / 1024:.0f} KB",
+                    patch=remote.patch_label,
+                )
+            )
+            notes = remote.notes(self.language)
+            if notes:
+                blocks.append(self._t("update_notes", notes=notes))
+            new_auc = remote.benchmark_summary.get("phase_3_auc")
+            current_auc = self._current_phase_3_auc()
+            if new_auc is not None and current_auc is not None:
+                blocks.append(
+                    self._t(
+                        "update_compare",
+                        current_auc=f"{current_auc:.3f}",
+                        new_auc=f"{new_auc:.3f}",
+                    )
+                )
+        elif state.last_checked_at:
+            blocks.append(self._t("update_up_to_date"))
+        else:
+            blocks.append(self._t("update_unknown"))
+        blocks.append(self._t("update_safety"))
+        return "\n\n".join(blocks)
+
+    def _refresh_update_tab(self) -> None:
+        widget = self._update_text
+        if widget is None or not widget.winfo_exists():
+            return
+        widget.configure(state="normal")
+        widget.delete("1.0", "end")
+        widget.insert("1.0", self._update_tab_text())
+        widget.configure(state="disabled")
+
+    def _set_update_status(self, message: str, *, main: bool = True) -> None:
+        self._update_status_var.set(message)
+        if main:
+            self.status_var.set(message)
+
+    def _refresh_model_bundles(self) -> None:
+        try:
+            self.model_bundles = self._discover_model_bundles()
+        except (OSError, ValueError):
+            return
+        self.model_choices = self._localized_model_choices()
+        if self._model_combo is not None and self._model_combo.winfo_exists():
+            self._model_combo.configure(values=tuple(self.model_choices))
+
+    def _dialog_parent(self) -> tk.Misc:
+        window = self._model_window
+        if window is not None and window.winfo_exists():
+            return window
+        return self.root
+
+    def _auto_check_updates(self) -> None:
+        if self.updater is None:
+            return
+        try:
+            due = self.updater.should_check()
+        except OSError:
+            return
+        if due:
+            self.check_updates(manual=False)
+
+    def _start_update_poller(self) -> None:
+        if self._update_poller is None:
+            self._update_poller = self.root.after(120, self._drain_update_queue)
+
+    def _drain_update_queue(self) -> None:
+        self._update_poller = None
+        while True:
+            try:
+                action = self._update_queue.get_nowait()
+            except queue.Empty:
+                break
+            try:
+                action()
+            except tk.TclError:
+                return
+        if self._update_busy:
+            self._start_update_poller()
+
+    def check_updates(self, *, manual: bool = True) -> None:
+        if self.updater is None or self._update_busy:
+            return
+        self._update_busy = True
+        self._set_update_status(self._t("update_checking"), main=manual)
+        self._start_update_poller()
+        threading.Thread(
+            target=self._run_update_check, args=(manual,), daemon=True
+        ).start()
+
+    def _run_update_check(self, manual: bool) -> None:
+        updates: list[RemoteModel] = []
+        error: str | None = None
+        try:
+            updates = self.updater.check(self.updater.installed_bundles())
+        except ModelUpdateError as exc:
+            error = self._update_error_text(exc)
+        except Exception:  # noqa: BLE001 - a background check must never crash the app
+            error = self._t("update_check_failed")
+        self._update_queue.put(
+            lambda: self._finish_update_check(updates, error, manual)
+        )
+
+    def _finish_update_check(
+        self, updates: list[RemoteModel], error: str | None, manual: bool
+    ) -> None:
+        self._update_busy = False
+        if error is not None:
+            self._set_update_status(error, main=manual)
+            self._refresh_update_tab()
+            return
+        self._pending_updates = updates
+        if not updates:
+            self._set_update_status(self._t("update_up_to_date"), main=manual)
+            self._refresh_update_tab()
+            return
+        self._set_update_status(
+            self._t("update_found_status", name=updates[0].display_name)
+        )
+        self._refresh_update_tab()
+        if self.auto_update_var.get():
+            self.download_updates()
+
+    def download_updates(self) -> None:
+        if self.updater is None or self._update_busy:
+            return
+        if not self._pending_updates:
+            self._set_update_status(self._t("update_no_candidate"), main=False)
+            return
+        self._update_busy = True
+        remotes = list(self._pending_updates)
+        self._start_update_poller()
+        threading.Thread(
+            target=self._run_update_download, args=(remotes,), daemon=True
+        ).start()
+
+    def _run_update_download(self, remotes: list[RemoteModel]) -> None:
+        installed: list[ModelBundle] = []
+        error: str | None = None
+        for remote in remotes:
+            self._update_queue.put(
+                lambda name=remote.display_name: self._set_update_status(
+                    self._t("update_downloading", name=name)
+                )
+            )
+            try:
+                installed.append(self.updater.download_and_install(remote))
+            except ModelUpdateError as exc:
+                error = self._update_error_text(exc)
+                break
+            except Exception:  # noqa: BLE001 - keep the current model on any failure
+                error = self._t("update_error_install")
+                break
+        self._update_queue.put(lambda: self._finish_update_download(installed, error))
+
+    def _finish_update_download(
+        self, installed: list[ModelBundle], error: str | None
+    ) -> None:
+        self._update_busy = False
+        if installed:
+            done = {bundle.model_id for bundle in installed}
+            self._pending_updates = [
+                remote for remote in self._pending_updates if remote.model_id not in done
+            ]
+            self._refresh_model_bundles()
+        if error is not None:
+            self._set_update_status(self._t("update_failed", reason=error))
+            self._refresh_update_tab()
+            return
+        if not installed:
+            self._set_update_status(self._t("update_no_candidate"), main=False)
+            self._refresh_update_tab()
+            return
+        self._set_update_status(
+            self._t("update_installed", name=installed[-1].display_name)
+        )
+        self._refresh_update_tab()
+        self._offer_switch(installed)
+
+    def _offer_switch(self, installed: list[ModelBundle]) -> None:
+        target = next(
+            (
+                bundle
+                for bundle in installed
+                if bundle.rank_bracket_id == self.model_bundle.rank_bracket_id
+                and bundle.model_id != self.model_bundle.model_id
+            ),
+            None,
+        )
+        if target is None:
+            return
+        if not messagebox.askyesno(
+            self._t("update_switch_title"),
+            self._t("update_switch_prompt", name=target.display_name),
+            parent=self._dialog_parent(),
+        ):
+            return
+        self._activate_bundle(
+            next(
+                (
+                    bundle
+                    for bundle in self.model_bundles
+                    if bundle.model_id == target.model_id
+                ),
+                target,
+            )
+        )
+        self._refresh_update_tab()
+
+    def restore_previous_model(self) -> None:
+        if self.updater is None or self._update_busy:
+            return
+        bracket = self.model_bundle.rank_bracket_id
+        if not self.updater.has_previous(bracket):
+            self._set_update_status(self._t("update_no_previous"), main=False)
+            return
+        try:
+            restored = self.updater.rollback(bracket)
+        except ModelUpdateError as exc:
+            self._set_update_status(
+                self._t("update_failed", reason=self._update_error_text(exc))
+            )
+            self._refresh_update_tab()
+            return
+        self._refresh_model_bundles()
+        self._activate_bundle(
+            next(
+                (
+                    bundle
+                    for bundle in self.model_bundles
+                    if bundle.model_id == restored.model_id
+                ),
+                restored,
+            )
+        )
+        self._set_update_status(
+            self._t("update_rollback_done", name=restored.display_name)
+        )
+        self._refresh_update_tab()
+
+    def _toggle_auto_update(self) -> None:
+        if self.updater is None:
+            return
+        try:
+            state = self.updater.load_state()
+            state.auto_update = bool(self.auto_update_var.get())
+            self.updater.save_state(state)
+        except OSError:
+            return
+        if not state.auto_update:
+            self._set_update_status(self._t("update_disabled"), main=False)
 
     def _build_team_row(self, parent: ttk.Frame, side: str, label: str, color: str) -> None:
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=(12, 10))

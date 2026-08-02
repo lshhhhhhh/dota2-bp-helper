@@ -2,5 +2,6 @@
 
 from .state import DraftState
 
-__all__ = ["DraftState"]
+__version__ = "0.4.0"
 
+__all__ = ["DraftState", "__version__"]

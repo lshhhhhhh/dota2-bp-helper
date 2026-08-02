@@ -10,6 +10,7 @@ __pycache__/
 build/
 dist/
 *.spec
+*.egg-info/
 
 # Local training data, API responses, and machine-specific calibration
 data/collection/
