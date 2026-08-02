@@ -8,7 +8,7 @@
 
 ### 下载与运行
 
-普通用户请从 [GitHub Releases](https://github.com/lshhhhhhh/dota2-bp-helper/releases/latest) 下载 `Dota2BPHelper-0.4.0-win64.zip`：
+普通用户请从 [GitHub Releases](https://github.com/lshhhhhhh/dota2-bp-helper/releases/latest) 下载 `Dota2BPHelper-0.4.1-win64.zip`：
 
 1. 将压缩包完整解压到任意目录；不要直接在压缩包内运行。
 2. 双击 `Dota2BPHelper.exe`。
@@ -108,10 +108,10 @@ python -m unittest discover -s tests -v
 
 ```powershell
 python -m pip install -e ".[build]"
-powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.4.0
+powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.4.1
 ```
 
-构建结果位于 `dist/Dota2BPHelper-0.4.0-win64.zip`。项目没有自动 GitHub Actions 工作流；测试和发布由维护者手动执行。
+构建结果位于 `dist/Dota2BPHelper-0.4.1-win64.zip`。项目没有自动 GitHub Actions 工作流；测试和发布由维护者手动执行。
 
 ### 数据与训练
 
@@ -149,7 +149,7 @@ An offline draft assistant for Dota 2 ranked All Pick's three simultaneous blind
 
 ### Download and run
 
-Download `Dota2BPHelper-0.4.0-win64.zip` from [GitHub Releases](https://github.com/lshhhhhhh/dota2-bp-helper/releases/latest):
+Download `Dota2BPHelper-0.4.1-win64.zip` from [GitHub Releases](https://github.com/lshhhhhhh/dota2-bp-helper/releases/latest):
 
 1. Extract the whole archive to any folder; do not run it from inside the ZIP.
 2. Double-click `Dota2BPHelper.exe`.
@@ -249,10 +249,10 @@ Build the Windows portable archive:
 
 ```powershell
 python -m pip install -e ".[build]"
-powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.4.0
+powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Version 0.4.1
 ```
 
-The output is `dist/Dota2BPHelper-0.4.0-win64.zip`. This repository has no automatic GitHub Actions workflow; maintainers run tests and releases manually.
+The output is `dist/Dota2BPHelper-0.4.1-win64.zip`. This repository has no automatic GitHub Actions workflow; maintainers run tests and releases manually.
 
 ### Data and training
 
