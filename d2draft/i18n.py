@@ -1,0 +1,240 @@
+from __future__ import annotations
+
+from string import Formatter
+from typing import Any
+
+
+LANGUAGES = ("zh", "en")
+LANGUAGE_LABELS = {"zh": "中文", "en": "English"}
+
+
+_TEXT: dict[str, dict[str, str]] = {
+    "zh": {
+        "model": "模型",
+        "recognize_screen": "识别屏幕",
+        "open_screenshot": "读取截图",
+        "language": "语言",
+        "phase": "BP轮次",
+        "auto": "自动",
+        "capture_source": "识别来源",
+        "all_screens": "自动（所有屏幕）",
+        "always_on_top": "窗口置顶",
+        "auto_every_2s": "每2秒自动识别",
+        "input_help": "点击已选英雄即可移除；手动输入支持中文、英文、拼音、缩写与常用绰号",
+        "radiant": "天辉",
+        "dire": "夜魇",
+        "manual_add_to": "手动添加到{team}",
+        "add_hero": "添加英雄",
+        "empty_slot": "空位 {number}",
+        "manual": "手动",
+        "portrait": "头像",
+        "hero": "英雄",
+        "pick_probability": "选择概率",
+        "win_tendency": "胜率倾向",
+        "radiant_recommendation": "天辉下一手推荐 · 夜魇需防范",
+        "dire_recommendation": "夜魇下一手推荐 · 天辉需防范",
+        "waiting": "等待有效BP状态",
+        "ready": "就绪：读取截图或识别当前屏幕 · {model_status}",
+        "model_status": "模型 {rank} · 版本 {patch}",
+        "model_stale": "；数据最新版本 {latest}，需要重新训练",
+        "model_header": "  图像识别 · 双向阵容推荐 · {rank}模型 {patch}",
+        "model_info": "模型信息",
+        "overview": "总览",
+        "principle": "原理",
+        "metrics": "验证指标",
+        "benchmark": "基准对比",
+        "recommended_bracket": "推荐分段",
+        "apply_model": "应用模型",
+        "validated_models_only": "仅列出通过兼容性校验的内置模型",
+        "switched_model": "已切换到 {rank}模型 · Dota {patch}",
+        "rank_legend_plus": "传奇及以上",
+        "rank_archon_below": "统帅及以下",
+        "rank_all": "全段位",
+        "rank_custom": "段位 {lower}–{upper}",
+        "unknown": "未知",
+        "loaded_ok": "已加载 · 兼容性与文件完整性校验通过",
+        "model_overview": "{display_name}\n\n状态　　　　　{loaded_ok}\n模型 ID　　　 {model_id}\n适用版本　　　Dota 2 {patch}\n适用分段　　　{rank}\n生成时间　　　{created} (UTC)\n英雄表　　　　{heroes} 个英雄\n训练对局　　　{matches} 场可重建 BP\n训练决策样本　{examples} 个下一手选择\n模型包格式　　v{format_version}\n模型文件　　　{artifact}\nSHA-256　　　{sha}…\n\n这里只允许切换项目内置且通过校验的模型包，不接受任意 .npz 文件。这样可以防止模型与英雄表、输入维度或游戏版本不兼容。",
+        "model_principle": "模型与 App 的边界\n\nApp 负责截图识别、BP 状态管理和界面展示；模型只接收 BP 轮次、天辉英雄 ID、夜魇英雄 ID，输出所有合法英雄的排序及分数。模型包通过 manifest 声明版本、英雄表规模、输入输出契约和文件哈希。\n\n当前推荐原理\n\n第一轮：双方没有阵容信息，使用该版本的英雄选择频率作为先验。\n\n第二、三轮：把双方已出现的英雄编码成两个 127 维向量，加上 BP 轮次，输入单隐藏层神经网络，学习真实比赛中下一手通常会选择谁。\n\nValue 模块：估计候选英雄带来的胜率倾向，并按独立回测选择的权重混入排序。目前第一/二/三轮权重分别为 {phase_1} / {phase_2} / {phase_3}。\n\n当前没有加入位置、分路、玩家熟练度或“先手/幻象处理”等专家标签；这些可以作为以后可替换模型的输入扩展，但不属于当前模型契约。",
+        "test_set": "按时间切分的最终测试集",
+        "metrics_header": "轮次    样本数    前5覆盖率  前10覆盖率  中位排名  不看阵容榜前10",
+        "metrics_row": "第 {phase} 轮   {examples:>5,}    {hit5:>6}   {hit10:>6}   {median:>6}       {baseline:>6}",
+        "value_metrics": "胜率倾向模块：AUC {auc}，LogLoss {logloss}，Accuracy {accuracy}。",
+        "metrics_explanation": "解释：“前10覆盖率”表示实际下一手出现在推荐前 10 名中的比例。它衡量模型与真实选择的一致性，不等于推荐一定最优，也不能证明反事实胜率提升。",
+        "benchmark_missing": "这套模型还没有生成历史胜率关联报告。\n\n请先运行 d2draft.advantage_benchmark。",
+        "benchmark_title": "{rank}模型 · 历史对局中的胜率关联",
+        "benchmark_body": "我们要回答的问题：当真实玩家最后一手与模型推荐一致时，胜率是否更高？\n\n把“采纳推荐”定义为选择模型前 5 名内的英雄：\n\n选择前 5 名内英雄：胜率 {top5_followed:.1%}（{top5_followed_n:,} 次）\n选择前 5 名外英雄：胜率 {top5_other:.1%}（{top5_other_n:,} 次）\n观察到的胜率差：　 {top5_diff:+.1f} 个百分点\n\n更严格地只看模型第 1 推荐：\n选择第 1 推荐时胜率 {top1_followed:.1%}，其他选择 {top1_other:.1%}，观察差值 {top1_diff:+.1f} 个百分点（仅 {top1_n:,} 次匹配）。\n\n证据强度\n前 5 差值的粗略 95% 区间为 {low:+.1f} 到 {high:+.1f} 个百分点。\n\n当前结论\n历史数据呈现正相关，但区间仍包含 0；而且玩家选择并非随机分配，所以现在可以说“历史测试中观察到胜率优势”，还不能说模型导致了这些胜率提升。\n\n若要验证从 50% 到 53% 的实际胜率提升，在理想的 1:1 随机对照、95% 显著性和 80% 检验功效下，约需 {required_matches:,} 场完成对局；用户不采纳推荐时还需要更多样本。",
+        "hero_already_selected": "{hero} 已经在BP中",
+        "team_full": "该阵营五个槽位已满；请先点击头像移除一个英雄",
+        "hero_added": "已手动添加 {hero}",
+        "hero_removed": "已移除 {hero}",
+        "cannot_add": "无法添加英雄",
+        "unknown_hero": "无法识别英雄“{value}”；请输入中英文名、拼音、缩写或常用绰号",
+        "screen": "屏幕 {number}",
+        "primary": "主屏",
+        "right": "右侧",
+        "left": "左侧",
+        "below": "下方",
+        "above": "上方",
+        "auto_recognition_failed": "自动识别失败：{error}",
+        "scanning": "正在扫描显示器并定位 Dota 游戏画面…",
+        "capture_failed": "截屏失败：{error} · 请尝试固定选择一块屏幕",
+        "cannot_capture": "无法截取屏幕",
+        "capture_retry": "{error}\n\n请在“识别来源”中固定选择 Dota 所在的屏幕后重试。",
+        "auto_located": "自动定位游戏画面",
+        "choose_screenshot": "选择 Dota 2 BP 截图",
+        "image_files": "图片文件",
+        "all_files": "所有文件",
+        "confidence": "，平均置信度 {confidence:.0%}",
+        "recognized_complete": "{source}：识别完整 5v5{confidence}，BP 已结束",
+        "bp_finished": "BP 已结束",
+        "recognized_phase": "{source}：识别 {radiant}v{dire}{confidence}，第 {phase} 轮",
+        "recognized_invalid": "{source}：识别 {radiant}v{dire}{confidence}；请手动修正空缺或指定轮次",
+        "auto_phase_invalid": "自动轮次要求天辉和夜魇的英雄数同为 0、2 或 4",
+        "duplicate_hero": "同一英雄不能同时出现在两个阵营",
+        "recommendation_done": "第 {phase} 轮双向推荐完成 · 天辉 {radiant_kind} / 夜魇 {dire_kind} · Value 权重 {blend:g} · {rank}模型 {patch}",
+        "cannot_recommend": "无法推荐：{error}",
+        "cannot_generate": "无法生成推荐",
+        "kind_popularity": "常见选择",
+        "kind_neural": "神经网络",
+    },
+    "en": {
+        "model": "Model",
+        "recognize_screen": "Scan Screen",
+        "open_screenshot": "Open Screenshot",
+        "language": "Language",
+        "phase": "Draft Round",
+        "auto": "Auto",
+        "capture_source": "Capture Source",
+        "all_screens": "Auto (all displays)",
+        "always_on_top": "Always on top",
+        "auto_every_2s": "Auto-scan every 2s",
+        "input_help": "Click a selected hero to remove it; manual input supports Chinese/English names, pinyin, abbreviations, and nicknames",
+        "radiant": "Radiant",
+        "dire": "Dire",
+        "manual_add_to": "Add manually to {team}",
+        "add_hero": "Add Hero",
+        "empty_slot": "Empty {number}",
+        "manual": "Manual",
+        "portrait": "Portrait",
+        "hero": "Hero",
+        "pick_probability": "Pick Prob.",
+        "win_tendency": "Win Tendency",
+        "radiant_recommendation": "Next pick for Radiant · threat to Dire",
+        "dire_recommendation": "Next pick for Dire · threat to Radiant",
+        "waiting": "Waiting for a valid draft state",
+        "ready": "Ready: open a screenshot or scan the screen · {model_status}",
+        "model_status": "{rank} model · Patch {patch}",
+        "model_stale": "; newest data is {latest}, retraining required",
+        "model_header": "  Screen recognition · two-sided recommendations · {rank} model {patch}",
+        "model_info": "Model Information",
+        "overview": "Overview",
+        "principle": "How It Works",
+        "metrics": "Validation Metrics",
+        "benchmark": "Benchmark",
+        "recommended_bracket": "Skill bracket",
+        "apply_model": "Use Model",
+        "validated_models_only": "Only validated built-in model bundles are listed",
+        "switched_model": "Switched to {rank} model · Dota {patch}",
+        "rank_legend_plus": "Legend and above",
+        "rank_archon_below": "Archon and below",
+        "rank_all": "All ranks",
+        "rank_custom": "Ranks {lower}–{upper}",
+        "unknown": "Unknown",
+        "loaded_ok": "Loaded · compatibility and file integrity checks passed",
+        "model_overview": "{display_name}\n\nStatus             {loaded_ok}\nModel ID           {model_id}\nDota version       {patch}\nSkill bracket      {rank}\nCreated            {created} (UTC)\nHero catalog       {heroes} heroes\nTraining matches   {matches} reconstructable drafts\nTraining examples  {examples} next-pick decisions\nBundle format      v{format_version}\nModel file         {artifact}\nSHA-256            {sha}…\n\nOnly built-in model bundles that pass validation can be selected. Arbitrary .npz files are not accepted, preventing incompatibilities with the hero catalog, input dimensions, or game version.",
+        "model_principle": "Boundary between the model and the app\n\nThe app handles screen recognition, draft state, and presentation. The model only receives the draft round plus Radiant and Dire hero IDs, then returns scores and a ranking for every legal hero. Its manifest declares the version, hero catalog size, input/output contract, and file hash.\n\nCurrent recommendation method\n\nRound 1: neither side has lineup information, so the model uses pick frequency for the current patch as its prior.\n\nRounds 2 and 3: both revealed lineups are encoded as two 127-dimensional vectors, together with the round, and passed into a one-hidden-layer neural network trained on actual next picks.\n\nValue module: estimates the win-rate tendency added by a candidate and blends it into the ranking using weights chosen by a held-out backtest. The current round 1/2/3 weights are {phase_1} / {phase_2} / {phase_3}.\n\nThe current contract does not include roles, lanes, player proficiency, initiative, illusion clear, or other expert tags. A future replaceable model may extend the inputs.",
+        "test_set": "Final test set split chronologically",
+        "metrics_header": "Round    Samples     Hit@5   Hit@10  Median rank  No-lineup Hit@10",
+        "metrics_row": "Round {phase}  {examples:>7,}    {hit5:>6}   {hit10:>6}     {median:>6}          {baseline:>6}",
+        "value_metrics": "Win-tendency module: AUC {auc}, LogLoss {logloss}, Accuracy {accuracy}.",
+        "metrics_explanation": "Hit@10 is the share of actual next picks that appear in the top ten recommendations. It measures agreement with real picks; it does not prove that a recommendation is optimal or causes a counterfactual win-rate improvement.",
+        "benchmark_missing": "This model does not have a historical win-rate association report yet.\n\nRun d2draft.advantage_benchmark first.",
+        "benchmark_title": "{rank} model · historical win-rate association",
+        "benchmark_body": "Question: when an actual last pick agrees with the model, is its historical win rate higher?\n\nWe define following the recommendation as choosing a hero in the model's top five:\n\nTop-5 hero selected: {top5_followed:.1%} win rate ({top5_followed_n:,} decisions)\nHero outside top five: {top5_other:.1%} win rate ({top5_other_n:,} decisions)\nObserved difference: {top5_diff:+.1f} percentage points\n\nUsing only the model's #1 recommendation:\n#1 recommendation selected: {top1_followed:.1%}; other picks: {top1_other:.1%}; observed difference: {top1_diff:+.1f} points (only {top1_n:,} matching decisions).\n\nStrength of evidence\nThe approximate 95% interval for the top-5 difference is {low:+.1f} to {high:+.1f} percentage points.\n\nCurrent conclusion\nThe historical data shows a positive association, but the interval still includes zero and players were not randomly assigned to picks. We can say that the historical test observed an advantage, not that the model caused it.\n\nTo test a true improvement from 50% to 53% with an ideal 1:1 randomized trial, 95% significance and 80% power would require about {required_matches:,} completed matches. More are needed when recommendations are not followed.",
+        "hero_already_selected": "{hero} is already in the draft",
+        "team_full": "All five slots for this side are full; click a portrait to remove a hero first",
+        "hero_added": "Added {hero} manually",
+        "hero_removed": "Removed {hero}",
+        "cannot_add": "Cannot Add Hero",
+        "unknown_hero": "Could not identify “{value}”; enter a Chinese/English name, pinyin, abbreviation, or common nickname",
+        "screen": "Display {number}",
+        "primary": "Primary",
+        "right": "Right",
+        "left": "Left",
+        "below": "Below",
+        "above": "Above",
+        "auto_recognition_failed": "Auto-scan failed: {error}",
+        "scanning": "Scanning displays and locating the Dota game viewport…",
+        "capture_failed": "Screen capture failed: {error} · try selecting one display",
+        "cannot_capture": "Cannot Capture Screen",
+        "capture_retry": "{error}\n\nSelect the display containing Dota under “Capture Source” and try again.",
+        "auto_located": "game viewport auto-detected",
+        "choose_screenshot": "Choose a Dota 2 Draft Screenshot",
+        "image_files": "Image files",
+        "all_files": "All files",
+        "confidence": ", average confidence {confidence:.0%}",
+        "recognized_complete": "{source}: recognized a complete 5v5{confidence}; draft finished",
+        "bp_finished": "Draft finished",
+        "recognized_phase": "{source}: recognized {radiant}v{dire}{confidence}; round {phase}",
+        "recognized_invalid": "{source}: recognized {radiant}v{dire}{confidence}; correct missing slots manually or choose a round",
+        "auto_phase_invalid": "Auto round requires both Radiant and Dire to have 0, 2, or 4 heroes",
+        "duplicate_hero": "The same hero cannot appear on both sides",
+        "recommendation_done": "Round {phase} two-sided recommendations ready · Radiant {radiant_kind} / Dire {dire_kind} · Value weight {blend:g} · {rank} model {patch}",
+        "cannot_recommend": "Cannot recommend: {error}",
+        "cannot_generate": "Cannot Generate Recommendations",
+        "kind_popularity": "pick frequency",
+        "kind_neural": "neural network",
+    },
+}
+
+
+def tr(language: str, key: str, **values: Any) -> str:
+    if language not in LANGUAGES:
+        language = "en"
+    try:
+        template = _TEXT[language][key]
+    except KeyError as exc:
+        raise KeyError(f"missing translation: {language}.{key}") from exc
+    return template.format(**values) if values else template
+
+
+def rank_label(language: str, bracket_id: str, fallback: str = "") -> str:
+    key = {
+        "legend_plus": "rank_legend_plus",
+        "archon_below": "rank_archon_below",
+        "all": "rank_all",
+    }.get(bracket_id)
+    return tr(language, key) if key else (fallback or tr(language, "rank_all"))
+
+
+def validate_translations() -> None:
+    expected = set(_TEXT["zh"])
+    formatter = Formatter()
+    for language in LANGUAGES:
+        missing = expected - set(_TEXT[language])
+        extra = set(_TEXT[language]) - expected
+        if missing or extra:
+            raise ValueError(
+                f"translation keys differ for {language}: missing={sorted(missing)}, "
+                f"extra={sorted(extra)}"
+            )
+        for key in expected:
+            chinese_fields = {
+                field_name
+                for _, field_name, _, _ in formatter.parse(_TEXT["zh"][key])
+                if field_name
+            }
+            translated_fields = {
+                field_name
+                for _, field_name, _, _ in formatter.parse(_TEXT[language][key])
+                if field_name
+            }
+            if chinese_fields != translated_fields:
+                raise ValueError(
+                    f"translation placeholders differ for {language}.{key}: "
+                    f"expected={sorted(chinese_fields)}, "
+                    f"actual={sorted(translated_fields)}"
+                )
+
+
+validate_translations()
