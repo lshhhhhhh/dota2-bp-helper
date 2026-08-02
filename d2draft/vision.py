@@ -207,9 +207,19 @@ def locate_windowed_viewports(
     return selected
 
 
+# A drafted hero card carries a rank medal banner, a level badge and an info icon
+# across its lower third, all of which change with the player rather than the hero.
+# Comparing only the rows above them recovers heroes whose art sits low in the
+# frame. Cropping the capture box instead does not work: slots are fitted to a
+# fixed 64x36 canvas, so a shorter box is centre-cropped horizontally and loses
+# most of the hero. Masking after the fit keeps template and slot framing identical.
+FEATURE_ROWS = 24
+_FEATURE_SIZE = (64, 36)
+
+
 def _feature(image: Image.Image) -> np.ndarray:
-    image = ImageOps.fit(image.convert("RGB"), (64, 36), method=Image.Resampling.LANCZOS)
-    array = np.asarray(image, dtype=np.float32) / 255.0
+    image = ImageOps.fit(image.convert("RGB"), _FEATURE_SIZE, method=Image.Resampling.LANCZOS)
+    array = (np.asarray(image, dtype=np.float32) / 255.0)[:FEATURE_ROWS]
     # Standardized color retains portrait layout while reducing brightness/contrast sensitivity.
     color = (array - array.mean(axis=(0, 1), keepdims=True)) / (
         array.std(axis=(0, 1), keepdims=True) + 0.08
@@ -235,8 +245,14 @@ class PortraitMatcher:
         portraits_dir: str | Path | Iterable[str | Path],
         catalog: HeroCatalog,
         *,
-        minimum_similarity: float = 0.48,
-        minimum_margin: float = 0.015,
+        # An empty or dimmed card is *ambiguous*: it resembles many templates about
+        # equally, so the gap to the runner-up separates it far better than raw
+        # similarity does. Measured over 40 labelled slots, real heroes score a
+        # margin of 0.074 to 0.392 and empty cards 0.000 to 0.084, while their
+        # similarity ranges overlap heavily. Margin does the rejecting here, which
+        # is why the similarity floor can sit lower than it used to.
+        minimum_similarity: float = 0.45,
+        minimum_margin: float = 0.09,
         minimum_active_contrast: float = 30.0,
     ) -> None:
         self.catalog = catalog
